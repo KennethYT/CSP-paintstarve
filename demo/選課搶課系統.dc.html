@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  body{margin:0;font-family:'Manrope',system-ui,sans-serif;}
+  @keyframes seatPulse{0%{transform:scale(1.35);color:#1D4ED8;}100%{transform:scale(1);}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  a{color:#1D4ED8;text-decoration:none;}
+  a:hover{color:#1E40AF;text-decoration:underline;}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#F5F3EF;color:#1F2933;">
+
+<sc-if value="{{ isLoggedOut }}" hint-placeholder-val="{{ true }}">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+      
+    <div style="width: 354px; max-width: 420px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 8px 30px rgba(29,78,216,0.08); padding: 40px 36px; animation: fadeUp .4s ease; height: 424px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <div style="width:34px;height:34px;border-radius:9px;background:#1D4ED8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;">課</div>
+          <div style="font-weight:800;font-size:20px;letter-spacing:-0.3px;">選課搶課系統</div>
+        </div>
+        <div style="color:#6B7280;font-size:14px;margin-bottom:28px;">校園選課平台 · 模擬登入</div>
+
+        <div style="display: grid; gap: 10px; margin-bottom: 20px">
+          <div onClick="{{ chooseStudentRole }}" style="{{ studentRoleBtnStyle }}">
+            <div style="font-size:22px;margin-bottom:4px;">🎓</div>
+            <div style="font-weight:700;font-size:14px;">學生登入</div>
+          </div>
+          <div onClick="{{ chooseTeacherRole }}" style="{{ teacherRoleBtnStyle }}">
+            <div style="font-size:22px;margin-bottom:4px;">🧑‍🏫</div>
+            <div style="font-weight:700;font-size:14px;">教師登入</div>
+          </div>
+        </div>
+
+        <sc-if value="{{ loginRoleChoice }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">姓名</label>
+            <input type="text" value="{{ loginNameDraft }}" onChange="{{ onLoginNameChange }}" placeholder="請輸入姓名" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;margin-bottom:16px;outline:none;">
+            <div onClick="{{ handleLogin }}" style="cursor:pointer;background:#1D4ED8;color:#fff;text-align:center;padding:12px;border-radius:10px;font-weight:700;font-size:14px;">
+              以{{ loginRoleLabel }}身份登入
+            </div>
+          </div>
+        </sc-if>
+      </div></div>
+</sc-if>
+
+<sc-if value="{{ isLoggedIn }}" hint-placeholder-val="{{ false }}">
+  <div>
+    <div style="position:sticky;top:0;z-index:20;background:#FFFFFF;border-bottom:1px solid #EDEBE6;">
+      <div style="max-width:1180px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#1D4ED8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;">課</div>
+          <div style="font-weight:800;font-size:17px;letter-spacing:-0.2px;">選課搶課系統</div>
+        </div>
+        <div style="max-width:1180px;margin:0 auto;padding:0 24px;display:flex;gap:4px;">
+          <sc-for list="{{ navTabs }}" as="tab" hint-placeholder-count="3">
+            <div onClick="{{ tab.onClick }}" style="{{ tab.style }}">{{ tab.label }}</div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="{{ roleBadgeStyle }}">{{ roleLabel }}</span>
+            <span style="font-weight:700;font-size:14px;">{{ userName }}</span>
+          </div>
+          <div onClick="{{ handleLogout }}" style="cursor:pointer;font-size:13px;color:#6B7280;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid #E5E7EB;">登出</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:1180px;margin:0 auto;padding:28px 24px 80px;">
+
+      <sc-if value="{{ isBrowseScreen }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:20px;">
+            <div>
+              <div style="font-size:24px;font-weight:800;letter-spacing:-0.4px;">課程列表</div>
+              <div style="color:#6B7280;font-size:14px;margin-top:4px;">開搶瞬間名額即時變動，把握時機搶課</div>
+            </div>
+            <input type="text" value="{{ search }}" onChange="{{ onSearchChange }}" placeholder="搜尋課程名稱或教師…" style="width:260px;padding:10px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;background:#fff;">
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;">
+            <sc-for list="{{ categoryChips }}" as="chip" hint-placeholder-count="6">
+              <div onClick="{{ chip.onClick }}" style="{{ chip.style }}">{{ chip.name }}</div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+            <sc-for list="{{ courseCards }}" as="card" hint-placeholder-count="6">
+              <div style="background:#fff;border-radius:14px;border:1px solid #EDEBE6;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                <div onClick="{{ card.onOpen }}" style="cursor:pointer;">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="font-weight:800;font-size:16px;line-height:1.35;">{{ card.title }}</div>
+                    <span style="background:#F3F4F6;color:#4B5563;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap;">{{ card.category }}</span>
+                  </div>
+                  <div style="color:#6B7280;font-size:13px;margin-top:6px;">{{ card.teacher }} 老師 · {{ card.dayLabel }} {{ card.periodTime }}</div>
+                  <div style="color:#6B7280;font-size:13px;margin-top:2px;">📍 {{ card.location }}</div>
+                </div>
+
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;color:#6B7280;margin-bottom:4px;">
+                    <span>名額</span>
+                    <span>已選 <b key="{{ card.enrolledKey }}" style="color:#1F2933;display:inline-block;animation:seatPulse .5s ease;">{{ card.enrolled }}</b> / {{ card.capacity }}</span>
+                  </div>
+                  <div style="height:6px;background:#F3F4F6;border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;background:{{ card.barColor }};width:{{ card.fillPct }}%;transition:width .4s ease;"></div>
+                  </div>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px;">
+                  <span style="font-size:12px;font-weight:700;color:{{ card.statusColor }};">{{ card.statusLabel }}</span>
+                  <div onClick="{{ card.onGrab }}" style="{{ card.buttonStyle }}">{{ card.buttonLabel }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isDetailScreen }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div onClick="{{ backToBrowse }}" style="cursor:pointer;color:#6B7280;font-size:13px;font-weight:600;margin-bottom:16px;">← 回到課程列表</div>
+          <div style="background:#fff;border-radius:16px;border:1px solid #EDEBE6;padding:32px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+              <div>
+                <span style="background:#F3F4F6;color:#4B5563;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;">{{ detail.category }}</span>
+                <div style="font-size:26px;font-weight:800;margin-top:10px;letter-spacing:-0.4px;">{{ detail.title }}</div>
+                <div style="color:#6B7280;font-size:14px;margin-top:8px;">{{ detail.teacher }} 老師 · {{ detail.dayLabel }} {{ detail.periodTime }} · 📍 {{ detail.location }}</div>
+              </div>
+            </div>
+
+            <div style="margin-top:24px;">
+              <div style="font-weight:700;font-size:15px;margin-bottom:8px;">課程簡介</div>
+              <div style="color:#374151;font-size:14px;line-height:1.7;">{{ detail.description }}</div>
+            </div>
+
+            <div style="margin-top:22px;">
+              <div style="font-weight:700;font-size:15px;margin-bottom:8px;">課程大綱</div>
+              <sc-for list="{{ detail.syllabus }}" as="item" hint-placeholder-count="4">
+                <div style="display:flex;gap:8px;color:#374151;font-size:14px;line-height:1.8;">
+                  <span style="color:#1D4ED8;">▸</span><span>{{ item }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="margin-top:26px;background:#F9FAFB;border-radius:12px;padding:18px 20px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:#6B7280;margin-bottom:6px;">
+                <span>剩餘名額</span>
+                <span>已選 <b key="{{ detail.enrolledKey }}" style="color:#1F2933;display:inline-block;animation:seatPulse .5s ease;">{{ detail.enrolled }}</b> / {{ detail.capacity }}</span>
+              </div>
+              <div style="height:8px;background:#EDEBE6;border-radius:5px;overflow:hidden;margin-bottom:14px;">
+                <div style="height:100%;background:{{ detail.barColor }};width:{{ detail.fillPct }}%;transition:width .4s ease;"></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <span style="font-weight:700;font-size:14px;color:{{ detail.statusColor }};">{{ detail.statusLabel }}</span>
+                <div onClick="{{ detail.onGrab }}" style="{{ detail.buttonStyle }}">{{ detail.buttonLabel }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isScheduleScreen }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:4px;">我的課表</div>
+          <div style="color:#6B7280;font-size:14px;margin-bottom:22px;">已搶到與候補中的課程一覽</div>
+
+          <sc-if value="{{ hasNoEnrollments }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border:1px dashed #D1D5DB;border-radius:14px;padding:48px;text-align:center;color:#6B7280;">
+              尚未搶到任何課程，前往
+              <span onClick="{{ goToBrowse }}" style="color:#1D4ED8;font-weight:700;cursor:pointer;">課程列表</span> 開始搶課吧！
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ hasEnrollments }}" hint-placeholder-val="{{ false }}">
+            <div style="overflow-x:auto;background:#fff;border-radius:14px;border:1px solid #EDEBE6;margin-bottom:24px;">
+              <div style="display:grid;grid-template-columns:90px repeat(5,1fr);min-width:640px;">
+                <div style="padding:12px;font-size:12px;color:#9CA3AF;font-weight:700;border-bottom:1px solid #EDEBE6;">節次</div>
+                <sc-for list="{{ dayHeaders }}" as="d" hint-placeholder-count="5">
+                  <div style="padding:12px;text-align:center;font-size:13px;font-weight:700;border-bottom:1px solid #EDEBE6;border-left:1px solid #EDEBE6;">週{{ d }}</div>
+                </sc-for>
+
+                <sc-for list="{{ scheduleRows }}" as="row" hint-placeholder-count="5">
+                  <div style="padding:12px;font-size:12px;color:#6B7280;border-bottom:1px solid #EDEBE6;">
+                    <div style="font-weight:700;">{{ row.label }}</div>
+                    <div>{{ row.time }}</div>
+                  </div>
+                  <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="5">
+                    <div style="padding:8px;border-bottom:1px solid #EDEBE6;border-left:1px solid #EDEBE6;min-height:56px;">
+                      <sc-if value="{{ cell.hasCourse }}" hint-placeholder-val="{{ false }}">
+                        <div style="{{ cell.style }}">
+                          <div style="font-weight:700;font-size:12.5px;">{{ cell.title }}</div>
+                          <div style="font-size:11px;opacity:0.85;">{{ cell.statusLabel }}</div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <sc-for list="{{ enrollmentList }}" as="e" hint-placeholder-count="3">
+                <div style="background:#fff;border:1px solid #EDEBE6;border-radius:12px;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                  <div>
+                    <div style="font-weight:700;font-size:14.5px;">{{ e.title }}</div>
+                    <div style="color:#6B7280;font-size:13px;margin-top:2px;">{{ e.teacher }} 老師 · {{ e.dayLabel }} {{ e.periodTime }}</div>
+                  </div>
+                  <span style="{{ e.badgeStyle }}">{{ e.statusLabel }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isTeacherCoursesScreen }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div style="font-size:24px;font-weight:800;letter-spacing:-0.4px;">我的課程</div>
+              <div style="color:#6B7280;font-size:14px;margin-top:4px;">管理你開設的課程與搶課狀態</div>
+            </div>
+            <div onClick="{{ goToCreate }}" style="cursor:pointer;background:#1D4ED8;color:#fff;font-weight:700;font-size:14px;padding:11px 18px;border-radius:10px;">+ 建立新課程</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <sc-for list="{{ teacherCourseRows }}" as="row" hint-placeholder-count="3">
+              <div style="background:#fff;border:1px solid #EDEBE6;border-radius:14px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;">
+                <div style="min-width:220px;">
+                  <div style="font-weight:800;font-size:15.5px;">{{ row.title }}</div>
+                  <div style="color:#6B7280;font-size:13px;margin-top:4px;">{{ row.dayLabel }} {{ row.periodTime }} · 📍 {{ row.location }}</div>
+                </div>
+                <div style="min-width:160px;">
+                  <div style="font-size:12px;color:#6B7280;margin-bottom:4px;">已選 {{ row.enrolled }} / {{ row.capacity }}（候補 {{ row.waitlistCount }}）</div>
+                  <div style="height:6px;background:#F3F4F6;border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;background:{{ row.barColor }};width:{{ row.fillPct }}%;"></div>
+                  </div>
+                </div>
+                <span style="font-size:12px;font-weight:700;color:{{ row.statusColor }};">{{ row.statusLabel }}</span>
+                <div onClick="{{ row.onRoster }}" style="cursor:pointer;font-size:13px;font-weight:700;color:#1D4ED8;padding:8px 14px;border-radius:8px;border:1.5px solid #1D4ED8;white-space:nowrap;">查看名單</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCreateScreen }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:640px;">
+          <div onClick="{{ goToCourses }}" style="cursor:pointer;color:#6B7280;font-size:13px;font-weight:600;margin-bottom:16px;">← 回到我的課程</div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:20px;">建立課程</div>
+
+          <div style="background:#fff;border:1px solid #EDEBE6;border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:18px;">
+            <div>
+              <label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">課程名稱</label>
+              <input type="text" value="{{ createForm.title }}" onChange="{{ onTitleChange }}" placeholder="例如：資料結構與演算法" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">課程簡介</label>
+              <textarea value="{{ createForm.brief }}" onChange="{{ onBriefChange }}" placeholder="一段簡短的課程介紹" rows="3" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;resize:vertical;"></textarea>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">課程大綱（每行一項）</label>
+              <textarea value="{{ createForm.syllabus }}" onChange="{{ onSyllabusChange }}" placeholder="第一週：課程介紹
+第二週：…" rows="4" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;resize:vertical;"></textarea>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <div>
+                <label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">分類</label>
+                <select value="{{ createForm.category }}" onChange="{{ onCategoryChange }}" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;background:#fff;">
+                  <sc-for list="{{ categoryOptions }}" as="opt" hint-placeholder-count="6">
+                    <option value="{{ opt }}">{{ opt }}</option>
+                  </sc-for>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">上課地點</label>
+                <input type="text" value="{{ createForm.location }}" onChange="{{ onLocationChange }}" placeholder="例如：管理學院 302" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;">
+              </div>
+              <div>
+                <label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">上課星期</label>
+                <select value="{{ createForm.day }}" onChange="{{ onDayChange }}" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;background:#fff;">
+                  <sc-for list="{{ dayOptions }}" as="d" hint-placeholder-count="5">
+                    <option value="{{ d.value }}">週{{ d.label }}</option>
+                  </sc-for>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">上課節次</label>
+                <select value="{{ createForm.periodIndex }}" onChange="{{ onPeriodChange }}" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;background:#fff;">
+                  <sc-for list="{{ periodOptions }}" as="p" hint-placeholder-count="5">
+                    <option value="{{ p.value }}">{{ p.label }}（{{ p.time }}）</option>
+                  </sc-for>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">名額</label>
+                <input type="number" value="{{ createForm.capacity }}" onChange="{{ onCapacityChange }}" min="1" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;">
+              </div>
+              <div>
+                <label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">搶課開放時間</label>
+                <select value="{{ createForm.openMode }}" onChange="{{ onOpenModeChange }}" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:10px;border:1.5px solid #E5E7EB;font-size:14px;font-family:inherit;outline:none;background:#fff;">
+                  <option value="now">立即開放</option>
+                  <option value="soon">30 秒後開放（示範倒數）</option>
+                  <option value="tomorrow">明日開放</option>
+                </select>
+              </div>
+            </div>
+
+            <div onClick="{{ handleCreateCourse }}" style="cursor:pointer;background:#1D4ED8;color:#fff;text-align:center;padding:13px;border-radius:10px;font-weight:700;font-size:14.5px;margin-top:6px;">建立課程</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isDashboardScreen }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:20px;">課程總覽儀表板</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;">
+            <div style="background:#fff;border:1px solid #EDEBE6;border-radius:14px;padding:20px;">
+              <div style="color:#6B7280;font-size:13px;font-weight:600;">總課程數</div>
+              <div style="font-size:28px;font-weight:800;margin-top:6px;">{{ dashboard.totalCourses }}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #EDEBE6;border-radius:14px;padding:20px;">
+              <div style="color:#6B7280;font-size:13px;font-weight:600;">總選課人次</div>
+              <div style="font-size:28px;font-weight:800;margin-top:6px;">{{ dashboard.totalEnrollments }}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #EDEBE6;border-radius:14px;padding:20px;">
+              <div style="color:#6B7280;font-size:13px;font-weight:600;">總候補人數</div>
+              <div style="font-size:28px;font-weight:800;margin-top:6px;">{{ dashboard.totalWaitlist }}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #EDEBE6;border-radius:14px;padding:20px;">
+              <div style="color:#6B7280;font-size:13px;font-weight:600;">平均額滿率</div>
+              <div style="font-size:28px;font-weight:800;margin-top:6px;">{{ dashboard.avgFillRate }}%</div>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #EDEBE6;border-radius:14px;padding:22px;">
+            <div style="font-weight:700;font-size:15px;margin-bottom:14px;">熱門課程排行</div>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <sc-for list="{{ dashboard.topCourses }}" as="tc" hint-placeholder-count="3">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:5px;">
+                    <span style="font-weight:700;">#{{ tc.rank }} {{ tc.title }}</span>
+                    <span style="color:#6B7280;">{{ tc.enrolled }}/{{ tc.capacity }}（{{ tc.fillPct }}%）</span>
+                  </div>
+                  <div style="height:7px;background:#F3F4F6;border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;background:#1D4ED8;width:{{ tc.fillPct }}%;"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isRosterScreen }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div onClick="{{ goToCourses }}" style="cursor:pointer;color:#6B7280;font-size:13px;font-weight:600;margin-bottom:16px;">← 回到我的課程</div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:-0.3px;">{{ roster.title }}</div>
+          <div style="color:#6B7280;font-size:14px;margin-top:4px;margin-bottom:20px;">已選 {{ roster.enrolled }} / {{ roster.capacity }} · 候補 {{ roster.waitlistCount }} 人</div>
+
+          <div style="font-weight:700;font-size:14px;margin-bottom:10px;">已確認學生</div>
+          <div style="background:#fff;border:1px solid #EDEBE6;border-radius:12px;margin-bottom:22px;overflow:hidden;">
+            <sc-for list="{{ roster.students }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex;justify-content:space-between;padding:13px 18px;border-bottom:1px solid #F3F4F6;font-size:14px;">
+                <span style="font-weight:600;">{{ s.name }}</span>
+                <span style="color:#6B7280;">{{ s.id }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ roster.hasWaitlist }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:10px;">候補名單</div>
+              <div style="background:#fff;border:1px solid #EDEBE6;border-radius:12px;overflow:hidden;">
+                <sc-for list="{{ roster.waitlist }}" as="w" hint-placeholder-count="2">
+                  <div style="display:flex;justify-content:space-between;padding:13px 18px;border-bottom:1px solid #F3F4F6;font-size:14px;">
+                    <span style="font-weight:600;">{{ w.name }}</span>
+                    <span style="color:#B45309;font-weight:700;">候補第 {{ w.position }} 位</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ hasConfirmModal }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(17,24,39,0.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;">
+    <div style="background:#fff;border-radius:16px;padding:32px;max-width:380px;width:100%;text-align:center;animation:fadeUp .3s ease;">
+      <div style="font-size:40px;margin-bottom:10px;">{{ confirmModal.icon }}</div>
+      <div style="font-weight:800;font-size:18px;margin-bottom:8px;">{{ confirmModal.title }}</div>
+      <div style="color:#6B7280;font-size:14px;line-height:1.6;margin-bottom:22px;">{{ confirmModal.body }}</div>
+      <div onClick="{{ closeConfirmModal }}" style="cursor:pointer;background:#1D4ED8;color:#fff;padding:12px;border-radius:10px;font-weight:700;font-size:14px;">確認</div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;bottom:24px;right:24px;background:#111827;color:#fff;padding:13px 20px;border-radius:10px;font-size:13.5px;font-weight:600;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,0.2);">{{ toast.message }}</div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const CATEGORIES = ['資訊','人文藝術','商管','自然科學','語言','社會科學'];
+const DAY_LABELS = ['一','二','三','四','五'];
+const PERIODS = [
+  {label:'第1節', time:'08:10-09:00'},
+  {label:'第2節', time:'09:10-10:00'},
+  {label:'第3節', time:'10:10-11:00'},
+  {label:'第4節', time:'13:10-14:00'},
+  {label:'第5節', time:'14:10-15:00'}
+];
+const NAMES_POOL = ['陳品妤','林彥廷','張宜蓁','黃冠傑','吳佳穎','蔡宗翰','李欣妍','許家瑋','謝雨柔','鄭博文'];
+
+function seedCourses(now){
+  return [
+    {id:'c1', title:'資料結構與演算法', teacher:'張明德', category:'資訊', day:1, periodIndex:0, location:'資訊館 201', description:'介紹陣列、鏈結串列、樹與圖等核心資料結構，並實作經典演算法。', syllabus:['第1週：複雜度分析','第2週：鏈結串列與堆疊','第3週：樹狀結構','第4週：圖論與最短路徑'], capacity:30, enrolled:22, openAt: now-999999, hot:true, enrolledStudents: NAMES_POOL.slice(0,22).map((n,i)=>({name:n,id:'S10'+(100+i)})), waitlist:[]},
+    {id:'c2', title:'西洋藝術史導論', teacher:'林淑芬', category:'人文藝術', day:2, periodIndex:1, location:'人文大樓 105', description:'從文藝復興到當代藝術，建立西方視覺藝術的觀看方式。', syllabus:['第1週：文藝復興','第2週：巴洛克與洛可可','第3週：印象派','第4週：現代藝術'], capacity:40, enrolled:40, openAt: now-999999, hot:false, enrolledStudents: NAMES_POOL.map((n,i)=>({name:n,id:'S20'+(100+i)})).concat(NAMES_POOL.map((n,i)=>({name:n,id:'S21'+(100+i)}))).slice(0,40), waitlist:[{name:'吳承翰',position:1},{name:'林小美',position:2},{name:'王大衛',position:3}]},
+    {id:'c3', title:'創業與新事業開發', teacher:'王建宏', category:'商管', day:3, periodIndex:2, location:'管理學院 302', description:'從商業模式設計到募資簡報，帶你走過一次完整的創業歷程。', syllabus:['第1週：商業模式圖','第2週：市場驗證','第3週：財務規劃','第4週：募資簡報'], capacity:25, enrolled:10, openAt: now+25000, hot:false, enrolledStudents: NAMES_POOL.slice(0,10).map((n,i)=>({name:n,id:'S30'+(100+i)})), waitlist:[]},
+    {id:'c4', title:'普通物理學(一)', teacher:'陳雅婷', category:'自然科學', day:1, periodIndex:3, location:'理學院 B1', description:'力學與熱學基礎，含每週實驗課，建立扎實的物理直覺。', syllabus:['第1週：運動學','第2週：牛頓運動定律','第3週：功與能量','第4週：熱力學基礎'], capacity:35, enrolled:5, openAt: now+3*24*3600*1000, hot:false, enrolledStudents: NAMES_POOL.slice(0,5).map((n,i)=>({name:n,id:'S40'+(100+i)})), waitlist:[]},
+    {id:'c5', title:'英語簡報溝通技巧', teacher:'李佳恩', category:'語言', day:4, periodIndex:0, location:'語言中心 3F', description:'訓練英語口語架構與台風，適合準備國際發表的同學。', syllabus:['第1週：架構與開場','第2週：視覺輔助設計','第3週：問答應對','第4週：模擬發表'], capacity:20, enrolled:12, openAt: now-500000, hot:false, enrolledStudents: NAMES_POOL.slice(0,12).map((n,i)=>({name:n,id:'S50'+(100+i)})), waitlist:[]},
+    {id:'c6', title:'行為經濟學', teacher:'吳承翰', category:'社會科學', day:2, periodIndex:3, location:'社科院 210', description:'探討人類決策中的非理性因素，結合實驗與案例討論。', syllabus:['第1週：捷思與偏誤','第2週：展望理論','第3週：社會偏好','第4週：推力與政策設計'], capacity:28, enrolled:28, openAt: now-800000, hot:false, enrolledStudents: NAMES_POOL.map((n,i)=>({name:n,id:'S60'+(100+i)})).slice(0,28), waitlist:[{name:'周芷若',position:1}]},
+    {id:'c7', title:'數位攝影入門', teacher:'周文彥', category:'人文藝術', day:5, periodIndex:1, location:'藝術中心 暗房', description:'從構圖、光線到後製，帶你掌握數位攝影的基本語言。', syllabus:['第1週：曝光三要素','第2週：構圖法則','第3週：人像攝影','第4週：後製工作流'], capacity:18, enrolled:3, openAt: now-100000, hot:false, enrolledStudents: NAMES_POOL.slice(0,3).map((n,i)=>({name:n,id:'S70'+(100+i)})), waitlist:[]}
+  ];
+}
+
+class Component extends DCLogic {
+  state = (() => {
+    const now = Date.now();
+    return {
+      now, role: null, userName: '', loginRoleChoice: null, loginNameDraft: '',
+      screen: 'login', search: '', categoryFilter: '全部', selectedCourseId: null,
+      confirmModal: null, toast: null, studentEnrollments: {},
+      createForm: {title:'', category:'資訊', brief:'', syllabus:'', day:1, periodIndex:0, location:'', capacity:30, openMode:'now'},
+      courses: seedCourses(now)
+    };
+  })();
+
+  componentDidMount() {
+    this._tick = setInterval(() => this.setState({ now: Date.now() }), 1000);
+    this._deplete = setInterval(() => {
+      this.setState(s => {
+        const courses = s.courses.map(c => {
+          if (c.hot && s.now >= c.openAt && c.enrolled < c.capacity && Math.random() < 0.5) {
+            return { ...c, enrolled: c.enrolled + 1, enrolledStudents: c.enrolledStudents.concat([{name: NAMES_POOL[c.enrolled % NAMES_POOL.length], id: 'SX'+(1000+c.enrolled)}]) };
+          }
+          return c;
+        });
+        return { courses };
+      });
+    }, 2500);
+  }
+  componentWillUnmount() { clearInterval(this._tick); clearInterval(this._deplete); }
+
+  formatCountdown(ms) {
+    if (ms <= 0) return '已開放';
+    const totalSec = Math.floor(ms / 1000);
+    if (totalSec > 86400) { const d = Math.floor(totalSec/86400), h = Math.floor((totalSec%86400)/3600); return `${d}天${h}時後開放`; }
+    if (totalSec > 3600) { const h = Math.floor(totalSec/3600), m = Math.floor((totalSec%3600)/60); return `${h}時${m}分後開放`; }
+    const m = Math.floor(totalSec/60), s = totalSec%60;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} 後開搶`;
+  }
+
+  getStatus(course, now, enrollment) {
+    if (enrollment) {
+      if (enrollment.status === 'enrolled') return { phase:'my-enrolled', label:'✓ 已搶到', color:'#15803D' };
+      return { phase:'my-waitlist', label:'候補中 第'+enrollment.position+'位', color:'#B45309' };
+    }
+    if (now < course.openAt) return { phase:'upcoming', label: this.formatCountdown(course.openAt-now), color:'#6B7280' };
+    if (course.enrolled < course.capacity) return { phase:'open', label:'搶課中', color:'#1D4ED8' };
+    return { phase:'full', label:'已額滿', color:'#B91C1C' };
+  }
+
+  buttonForStatus(phase) {
+    const base = 'padding:9px 16px;border-radius:8px;font-weight:700;font-size:13px;white-space:nowrap;';
+    if (phase === 'upcoming') return base + 'background:#F3F4F6;color:#9CA3AF;cursor:not-allowed;';
+    if (phase === 'open') return base + 'background:#1D4ED8;color:#fff;cursor:pointer;';
+    if (phase === 'full') return base + 'background:#FEF3C7;color:#B45309;cursor:pointer;';
+    if (phase === 'my-enrolled') return base + 'background:#DCFCE7;color:#15803D;cursor:default;';
+    return base + 'background:#FEF3C7;color:#B45309;cursor:default;';
+  }
+
+  buttonLabelForStatus(phase) {
+    if (phase === 'upcoming') return '尚未開放';
+    if (phase === 'open') return '搶課';
+    if (phase === 'full') return '加入候補';
+    if (phase === 'my-enrolled') return '已搶到';
+    return '候補中';
+  }
+
+  buildCardVM(course, now, isDetail) {
+    const enrollment = this.state.studentEnrollments[course.id];
+    const status = this.getStatus(course, now, enrollment);
+    const capActionable = status.phase === 'open' || status.phase === 'full';
+    return {
+      id: course.id, title: course.title, teacher: course.teacher, category: course.category,
+      dayLabel: '週' + DAY_LABELS[course.day-1], periodTime: PERIODS[course.periodIndex].time, location: course.location,
+      description: course.description, syllabus: course.syllabus,
+      enrolled: course.enrolled, capacity: course.capacity, enrolledKey: course.id+'-'+course.enrolled,
+      fillPct: Math.round((course.enrolled/course.capacity)*100),
+      barColor: course.enrolled >= course.capacity ? '#B91C1C' : '#1D4ED8',
+      statusLabel: status.label, statusColor: status.color,
+      buttonStyle: this.buttonForStatus(status.phase), buttonLabel: this.buttonLabelForStatus(status.phase),
+      onOpen: () => this.setState({ screen:'detail', selectedCourseId: course.id }),
+      onGrab: capActionable ? () => this.grabCourse(course.id) : () => {}
+    };
+  }
+
+  grabCourse(courseId) {
+    if (this.state.studentEnrollments[courseId]) return;
+    const now = this.state.now;
+    const course = this.state.courses.find(c => c.id === courseId);
+    if (!course || now < course.openAt) return;
+    if (course.enrolled < course.capacity) {
+      const studentId = 'S99' + Math.floor(Math.random()*900+100);
+      this.setState(s => ({
+        courses: s.courses.map(c => c.id === courseId ? { ...c, enrolled: c.enrolled+1, enrolledStudents: c.enrolledStudents.concat([{name: s.userName, id: studentId}]) } : c),
+        studentEnrollments: { ...s.studentEnrollments, [courseId]: { status:'enrolled' } },
+        confirmModal: { icon:'🎉', title:'搶課成功！', body:`已為你保留「${course.title}」的座位，可至「我的課表」查看。` }
+      }));
+    } else {
+      const position = course.waitlist.length + 1;
+      this.setState(s => ({
+        courses: s.courses.map(c => c.id === courseId ? { ...c, waitlist: c.waitlist.concat([{name: s.userName, position}]) } : c),
+        studentEnrollments: { ...s.studentEnrollments, [courseId]: { status:'waitlist', position } },
+        confirmModal: { icon:'⏳', title:'已加入候補', body:`「${course.title}」目前候補排序第 ${position} 位，額滿後將依序遞補。` }
+      }));
+    }
+  }
+
+  showToast(message) {
+    this.setState({ toast: { message } });
+    setTimeout(() => this.setState({ toast: null }), 2800);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const now = s.now;
+    const isLoggedIn = !!s.role;
+    const roleLabel = s.role === 'teacher' ? '教師' : '學生';
+
+    const tabDefsStudent = [{id:'browse', label:'瀏覽課程'}, {id:'schedule', label:'我的課表'}];
+    const tabDefsTeacher = [{id:'courses', label:'我的課程'}, {id:'create', label:'建立課程'}, {id:'dashboard', label:'儀表板'}];
+    const tabDefs = s.role === 'teacher' ? tabDefsTeacher : tabDefsStudent;
+    const navTabs = tabDefs.map(t => ({
+      label: t.label,
+      onClick: () => this.setState({ screen: t.id }),
+      style: `cursor:pointer;padding:12px 6px;margin-right:22px;font-size:14px;font-weight:700;border-bottom:2.5px solid ${s.screen===t.id?'#1D4ED8':'transparent'};color:${s.screen===t.id?'#1D4ED8':'#6B7280'};`
+    }));
+
+    const categoryChips = ['全部', ...CATEGORIES].map(name => ({
+      name,
+      onClick: () => this.setState({ categoryFilter: name }),
+      style: `cursor:pointer;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:700;background:${s.categoryFilter===name?'#1D4ED8':'#fff'};color:${s.categoryFilter===name?'#fff':'#4B5563'};border:1.5px solid ${s.categoryFilter===name?'#1D4ED8':'#E5E7EB'};`
+    }));
+
+    const filtered = s.courses.filter(c =>
+      (s.categoryFilter === '全部' || c.category === s.categoryFilter) &&
+      (c.title.includes(s.search) || c.teacher.includes(s.search))
+    );
+    const courseCards = filtered.map(c => this.buildCardVM(c, now));
+
+    const selectedCourse = s.courses.find(c => c.id === s.selectedCourseId);
+    const detail = selectedCourse ? this.buildCardVM(selectedCourse, now, true) : null;
+
+    const enrolledIds = Object.keys(s.studentEnrollments);
+    const enrollmentList = enrolledIds.map(id => {
+      const c = s.courses.find(x => x.id === id);
+      const e = s.studentEnrollments[id];
+      const label = e.status === 'enrolled' ? '已確認' : '候補第 '+e.position+' 位';
+      const bg = e.status === 'enrolled' ? '#DCFCE7' : '#FEF3C7';
+      const fg = e.status === 'enrolled' ? '#15803D' : '#B45309';
+      return { title: c.title, teacher: c.teacher, dayLabel:'週'+DAY_LABELS[c.day-1], periodTime: PERIODS[c.periodIndex].time,
+        statusLabel: label, badgeStyle: `background:${bg};color:${fg};font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;` };
+    });
+
+    const dayHeaders = DAY_LABELS;
+    const scheduleRows = PERIODS.map((p, pIdx) => ({
+      label: p.label, time: p.time,
+      cells: [1,2,3,4,5].map(day => {
+        const c = s.courses.find(x => x.day===day && x.periodIndex===pIdx && s.studentEnrollments[x.id]);
+        if (!c) return { hasCourse: false };
+        const e = s.studentEnrollments[c.id];
+        const enrolled = e.status === 'enrolled';
+        return { hasCourse: true, title: c.title, statusLabel: enrolled?'已確認':'候補中',
+          style: `background:${enrolled?'#EFF6FF':'#FFFBEB'};color:${enrolled?'#1D4ED8':'#B45309'};border-radius:8px;padding:8px;height:100%;` };
+      })
+    }));
+
+    const teacherCourses = s.courses.filter(c => c.teacher === s.userName);
+    const teacherCourseRows = teacherCourses.map(c => {
+      const status = this.getStatus(c, now, null);
+      return {
+        title: c.title, dayLabel:'週'+DAY_LABELS[c.day-1], periodTime: PERIODS[c.periodIndex].time, location: c.location,
+        enrolled: c.enrolled, capacity: c.capacity, waitlistCount: c.waitlist.length,
+        fillPct: Math.round((c.enrolled/c.capacity)*100), barColor: c.enrolled>=c.capacity?'#B91C1C':'#1D4ED8',
+        statusLabel: status.label, statusColor: status.color,
+        onRoster: () => this.setState({ screen:'roster', selectedCourseId: c.id })
+      };
+    });
+
+    const dashTotalCourses = teacherCourses.length;
+    const dashTotalEnrollments = teacherCourses.reduce((a,c)=>a+c.enrolled,0);
+    const dashTotalWaitlist = teacherCourses.reduce((a,c)=>a+c.waitlist.length,0);
+    const dashTotalCapacity = teacherCourses.reduce((a,c)=>a+c.capacity,0) || 1;
+    const topCourses = [...teacherCourses].sort((a,b)=>(b.enrolled/b.capacity)-(a.enrolled/a.capacity)).slice(0,3)
+      .map((c,i)=>({ rank:i+1, title:c.title, enrolled:c.enrolled, capacity:c.capacity, fillPct: Math.round((c.enrolled/c.capacity)*100) }));
+
+    const rosterCourse = s.courses.find(c => c.id === s.selectedCourseId);
+    const roster = rosterCourse ? {
+      title: rosterCourse.title, enrolled: rosterCourse.enrolled, capacity: rosterCourse.capacity,
+      waitlistCount: rosterCourse.waitlist.length, students: rosterCourse.enrolledStudents,
+      hasWaitlist: rosterCourse.waitlist.length > 0, waitlist: rosterCourse.waitlist
+    } : null;
+
+    return {
+      isLoggedIn, isLoggedOut: !isLoggedIn, roleLabel, userName: s.userName,
+      roleBadgeStyle: `background:${s.role==='teacher'?'#DBEAFE':'#F3F4F6'};color:${s.role==='teacher'?'#1D4ED8':'#4B5563'};font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;`,
+      loginRoleChoice: s.loginRoleChoice, loginNameDraft: s.loginNameDraft,
+      loginRoleLabel: s.loginRoleChoice==='teacher' ? '教師' : '學生',
+      studentRoleBtnStyle: `flex:1;cursor:pointer;text-align:center;padding:16px 10px;border-radius:12px;border:2px solid ${s.loginRoleChoice==='student'?'#1D4ED8':'#E5E7EB'};background:${s.loginRoleChoice==='student'?'#EFF6FF':'#fff'};`,
+      teacherRoleBtnStyle: `flex:1;cursor:pointer;text-align:center;padding:16px 10px;border-radius:12px;border:2px solid ${s.loginRoleChoice==='teacher'?'#1D4ED8':'#E5E7EB'};background:${s.loginRoleChoice==='teacher'?'#EFF6FF':'#fff'};`,
+      chooseStudentRole: () => this.setState({ loginRoleChoice:'student' }),
+      chooseTeacherRole: () => this.setState({ loginRoleChoice:'teacher' }),
+      onLoginNameChange: e => this.setState({ loginNameDraft: e.target.value }),
+      handleLogin: () => {
+        const name = s.loginNameDraft.trim() || (s.loginRoleChoice==='teacher' ? '示範老師' : '示範學生');
+        if (s.loginRoleChoice === 'teacher') {
+          const hasOwn = s.courses.some(c => c.teacher === name);
+          if (!hasOwn) {
+            const seedNow = Date.now();
+            const demo = { id:'seed-'+name, title:'示範課程：專題研究方法', teacher:name, category:'資訊', day:3, periodIndex:0, location:'研究大樓 401',
+              description:'帶領學生完成一份完整的專題研究提案，涵蓋文獻回顧與研究設計。',
+              syllabus:['第1週：主題選定','第2週：文獻回顧','第3週：研究方法設計','第4週：提案報告'],
+              capacity:20, enrolled:18, openAt: seedNow-999999, hot:false,
+              enrolledStudents: NAMES_POOL.slice(0,18).map((n,i)=>({name:n,id:'D10'+(100+i)})),
+              waitlist:[{name:'洪韋辰',position:1},{name:'邱思瑀',position:2}] };
+            this.setState({ courses: s.courses.concat([demo]) });
+          }
+        }
+        this.setState({ role: s.loginRoleChoice, userName: name, screen: s.loginRoleChoice==='teacher' ? 'courses' : 'browse' });
+      },
+      handleLogout: () => this.setState({ role:null, userName:'', screen:'login', loginRoleChoice:null, loginNameDraft:'' }),
+
+      isTabScreen: ['browse','schedule','courses','create','dashboard'].includes(s.screen),
+      navTabs,
+      isBrowseScreen: s.screen === 'browse',
+      isDetailScreen: s.screen === 'detail',
+      isScheduleScreen: s.screen === 'schedule',
+      isTeacherCoursesScreen: s.screen === 'courses',
+      isCreateScreen: s.screen === 'create',
+      isDashboardScreen: s.screen === 'dashboard',
+      isRosterScreen: s.screen === 'roster',
+
+      search: s.search, onSearchChange: e => this.setState({ search: e.target.value }),
+      categoryChips, courseCards,
+      detail, backToBrowse: () => this.setState({ screen:'browse' }),
+
+      hasEnrollments: enrolledIds.length > 0, hasNoEnrollments: enrolledIds.length === 0, enrollmentList,
+      dayHeaders, scheduleRows,
+      goToBrowse: () => this.setState({ screen:'browse' }),
+
+      teacherCourseRows,
+      goToCreate: () => this.setState({ screen:'create' }),
+      goToCourses: () => this.setState({ screen:'courses' }),
+
+      createForm: s.createForm,
+      categoryOptions: CATEGORIES,
+      dayOptions: DAY_LABELS.map((l,i)=>({ value: i+1, label: l })),
+      periodOptions: PERIODS.map((p,i)=>({ value: i, label: p.label, time: p.time })),
+      onTitleChange: e => this.setState({ createForm: { ...s.createForm, title: e.target.value } }),
+      onBriefChange: e => this.setState({ createForm: { ...s.createForm, brief: e.target.value } }),
+      onSyllabusChange: e => this.setState({ createForm: { ...s.createForm, syllabus: e.target.value } }),
+      onCategoryChange: e => this.setState({ createForm: { ...s.createForm, category: e.target.value } }),
+      onLocationChange: e => this.setState({ createForm: { ...s.createForm, location: e.target.value } }),
+      onDayChange: e => this.setState({ createForm: { ...s.createForm, day: parseInt(e.target.value,10) } }),
+      onPeriodChange: e => this.setState({ createForm: { ...s.createForm, periodIndex: parseInt(e.target.value,10) } }),
+      onCapacityChange: e => this.setState({ createForm: { ...s.createForm, capacity: parseInt(e.target.value,10) || 1 } }),
+      onOpenModeChange: e => this.setState({ createForm: { ...s.createForm, openMode: e.target.value } }),
+      handleCreateCourse: () => {
+        const f = s.createForm;
+        if (!f.title.trim()) return;
+        const n = Date.now();
+        const openAt = f.openMode === 'now' ? n - 1000 : f.openMode === 'soon' ? n + 30000 : n + 24*3600*1000;
+        const newCourse = {
+          id: 'c'+n, title: f.title.trim(), teacher: s.userName, category: f.category,
+          day: f.day, periodIndex: f.periodIndex, location: f.location.trim() || '教室未定',
+          description: f.brief.trim() || '課程簡介尚未提供。',
+          syllabus: f.syllabus.split('\n').map(x=>x.trim()).filter(Boolean),
+          capacity: f.capacity, enrolled: 0, openAt, hot:false, enrolledStudents: [], waitlist: []
+        };
+        this.setState({
+          courses: s.courses.concat([newCourse]), screen: 'courses',
+          createForm: { title:'', category:'資訊', brief:'', syllabus:'', day:1, periodIndex:0, location:'', capacity:30, openMode:'now' }
+        });
+        this.showToast('課程建立成功！');
+      },
+
+      dashboard: {
+        totalCourses: dashTotalCourses, totalEnrollments: dashTotalEnrollments, totalWaitlist: dashTotalWaitlist,
+        avgFillRate: Math.round((dashTotalEnrollments/dashTotalCapacity)*100), topCourses
+      },
+      roster,
+
+      hasConfirmModal: !!s.confirmModal, confirmModal: s.confirmModal || {},
+      closeConfirmModal: () => this.setState({ confirmModal: null }),
+      hasToast: !!s.toast, toast: s.toast || {}
+    };
+  }
+}
+</script>
+</body>
+</html>
