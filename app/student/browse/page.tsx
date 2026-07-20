@@ -53,7 +53,8 @@ export default function StudentBrowsePage() {
       <div className="grid-auto">
         {courses.map((course) => {
           const status = getStatus(course, classroom.now, classroom.studentEnrollments[course.id]);
-          const actionable = status.phase === "open" || status.phase === "full";
+          const actionable = status.phase === "open" || status.phase === "full" || status.phase === "my-enrolled" || status.phase === "my-waitlist";
+          const isCancelAction = status.phase === "my-enrolled" || status.phase === "my-waitlist";
 
           return (
             <article key={course.id} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -78,7 +79,23 @@ export default function StudentBrowsePage() {
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <span style={{ fontSize: 12, fontWeight: 900, color: status.color }}>{status.label}</span>
-                <button className="btn" style={{ ...styleFromText(getButtonStyle(status.phase)) }} disabled={!actionable} onClick={() => actionable ? classroom.grabCourse(course.id) : undefined}>
+                <button
+                  className="btn"
+                  style={{ ...styleFromText(getButtonStyle(status.phase)) }}
+                  disabled={!actionable}
+                  onClick={() => {
+                    if (!actionable) {
+                      return;
+                    }
+
+                    if (isCancelAction) {
+                      classroom.cancelEnrollment(course.id);
+                      return;
+                    }
+
+                    classroom.grabCourse(course.id);
+                  }}
+                >
                   {getButtonLabel(status.phase)}
                 </button>
               </div>

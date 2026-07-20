@@ -51,15 +51,17 @@ export function getButtonStyle(phase: string) {
   if (phase === "upcoming") return `${base}background:#F3F4F6;color:#9CA3AF;cursor:not-allowed;`;
   if (phase === "open") return `${base}background:#1D4ED8;color:#fff;cursor:pointer;`;
   if (phase === "full") return `${base}background:#FEF3C7;color:#B45309;cursor:pointer;`;
-  if (phase === "my-enrolled") return `${base}background:#DCFCE7;color:#15803D;cursor:default;`;
-  return `${base}background:#FEF3C7;color:#B45309;cursor:default;`;
+  if (phase === "my-enrolled") return `${base}background:#2b1c1c;color:#FCA5A5;cursor:pointer;border:1px solid #7F1D1D;`;
+  if (phase === "my-waitlist") return `${base}background:#29211a;color:#FDBA74;cursor:pointer;border:1px solid #9A3412;`;
+  return `${base}background:#1f1f1f;color:#d4d4d4;cursor:default;`;
 }
 
 export function getButtonLabel(phase: string) {
   if (phase === "upcoming") return "尚未開放";
   if (phase === "open") return "搶課";
   if (phase === "full") return "加入候補";
-  if (phase === "my-enrolled") return "已搶到";
+  if (phase === "my-enrolled") return "取消選課";
+  if (phase === "my-waitlist") return "取消候補";
   return "候補中";
 }
 

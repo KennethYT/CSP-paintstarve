@@ -19,6 +19,7 @@ type ClassroomContextValue = ClassroomState & {
   login: (role: Role, name: string) => void;
   logout: () => void;
   grabCourse: (courseId: string) => void;
+  cancelEnrollment: (courseId: string) => void;
   createTeacherCourse: (course: Omit<Course, "id" | "enrolled" | "enrolledStudents" | "waitlist">) => void;
   dismissConfirmModal: () => void;
 };
@@ -209,6 +210,83 @@ export function ClassroomProvider({ children }: Readonly<{ children: React.React
       });
     };
 
+    const cancelEnrollment = (courseId: string) => {
+      setState((current) => {
+        const enrollment = current.studentEnrollments[courseId];
+
+        if (!enrollment) {
+          return current;
+        }
+
+        const course = current.courses.find((candidate) => candidate.id === courseId);
+
+        if (!course) {
+          return current;
+        }
+
+        const nextEnrollments = { ...current.studentEnrollments };
+        delete nextEnrollments[courseId];
+
+        let nextCourses = current.courses;
+
+        if (enrollment.status === "enrolled") {
+          const nextEnrolled = Math.max(course.enrolled - 1, 0);
+          const removeIndex = course.enrolledStudents.findIndex((student) => student.name === current.userName);
+
+          nextCourses = current.courses.map((candidate) => {
+            if (candidate.id !== courseId) {
+              return candidate;
+            }
+
+            const nextStudents = removeIndex >= 0
+              ? candidate.enrolledStudents.filter((_, index) => index !== removeIndex)
+              : candidate.enrolledStudents;
+
+            return {
+              ...candidate,
+              enrolled: nextEnrolled,
+              enrolledStudents: nextStudents
+            };
+          });
+
+          return {
+            ...current,
+            courses: nextCourses,
+            studentEnrollments: nextEnrollments,
+            confirmModal: {
+              icon: "🗑️",
+              title: "已取消選課",
+              body: `已取消「${course.title}」選課，你可以重新搶課或改選其他課程。`
+            }
+          };
+        }
+
+        const nextWaitlist = course.waitlist
+          .filter((student) => student.name !== current.userName)
+          .map((student, index) => ({ ...student, position: index + 1 }));
+
+        nextCourses = current.courses.map((candidate) =>
+          candidate.id === courseId
+            ? {
+                ...candidate,
+                waitlist: nextWaitlist
+              }
+            : candidate
+        );
+
+        return {
+          ...current,
+          courses: nextCourses,
+          studentEnrollments: nextEnrollments,
+          confirmModal: {
+            icon: "🗑️",
+            title: "已取消候補",
+            body: `已取消「${course.title}」候補資格。`
+          }
+        };
+      });
+    };
+
     const createTeacherCourse = (course: Omit<Course, "id" | "enrolled" | "enrolledStudents" | "waitlist">) => {
       setState((current) => ({
         ...current,
@@ -234,6 +312,7 @@ export function ClassroomProvider({ children }: Readonly<{ children: React.React
       login,
       logout,
       grabCourse,
+      cancelEnrollment,
       createTeacherCourse,
       dismissConfirmModal
     };

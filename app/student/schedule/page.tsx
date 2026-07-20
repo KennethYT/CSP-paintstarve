@@ -18,16 +18,18 @@ export default function StudentSchedulePage() {
     }
 
     return {
+      courseId,
       title: course.title,
       teacher: course.teacher,
       dayLabel: `週${dayLabels[course.day - 1]}`,
       periodTime: buildPeriodLabel(course.periodIndex),
+      enrollmentStatus: enrollment.status,
       statusLabel: enrollment.status === "enrolled" ? "已確認" : `候補第 ${enrollment.position} 位`,
       badgeStyle: enrollment.status === "enrolled"
         ? "background:#DCFCE7;color:#15803D;font-size:12px;font-weight:800;padding:5px 12px;border-radius:999px;"
         : "background:#FEF3C7;color:#B45309;font-size:12px;font-weight:800;padding:5px 12px;border-radius:999px;"
     };
-  }).filter(Boolean) as Array<{ title: string; teacher: string; dayLabel: string; periodTime: string; statusLabel: string; badgeStyle: string }>;
+  }).filter(Boolean) as Array<{ courseId: string; title: string; teacher: string; dayLabel: string; periodTime: string; enrollmentStatus: "enrolled" | "waitlist"; statusLabel: string; badgeStyle: string }>;
 
   return (
     <section>
@@ -74,7 +76,24 @@ export default function StudentSchedulePage() {
                   <div style={{ fontWeight: 900, fontSize: 14.5 }}>{item.title}</div>
                   <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>{item.teacher} 老師 · {item.dayLabel} {item.periodTime}</div>
                 </div>
-                <span style={styleFromText(item.badgeStyle)}>{item.statusLabel}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={styleFromText(item.badgeStyle)}>{item.statusLabel}</span>
+                  <button
+                    className="btn"
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 10,
+                      fontWeight: 800,
+                      fontSize: 12,
+                      background: item.enrollmentStatus === "enrolled" ? "#2b1c1c" : "#29211a",
+                      color: item.enrollmentStatus === "enrolled" ? "#FCA5A5" : "#FDBA74",
+                      border: item.enrollmentStatus === "enrolled" ? "1px solid #7F1D1D" : "1px solid #9A3412"
+                    }}
+                    onClick={() => classroom.cancelEnrollment(item.courseId)}
+                  >
+                    {item.enrollmentStatus === "enrolled" ? "取消選課" : "取消候補"}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

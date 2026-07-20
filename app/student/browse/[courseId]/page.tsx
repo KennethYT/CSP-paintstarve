@@ -26,7 +26,8 @@ export default function StudentCourseDetailPage() {
     notFound();
   }
 
-  const actionable = detail.status.phase === "open" || detail.status.phase === "full";
+  const actionable = detail.status.phase === "open" || detail.status.phase === "full" || detail.status.phase === "my-enrolled" || detail.status.phase === "my-waitlist";
+  const isCancelAction = detail.status.phase === "my-enrolled" || detail.status.phase === "my-waitlist";
 
   return (
     <section>
@@ -70,7 +71,23 @@ export default function StudentCourseDetailPage() {
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <span style={{ fontWeight: 900, fontSize: 14, color: detail.status.color }}>{detail.status.label}</span>
-            <button className="btn" style={{ ...styleFromText(getButtonStyle(detail.status.phase)) }} disabled={!actionable} onClick={() => actionable ? classroom.grabCourse(detail.course.id) : undefined}>
+            <button
+              className="btn"
+              style={{ ...styleFromText(getButtonStyle(detail.status.phase)) }}
+              disabled={!actionable}
+              onClick={() => {
+                if (!actionable) {
+                  return;
+                }
+
+                if (isCancelAction) {
+                  classroom.cancelEnrollment(detail.course.id);
+                  return;
+                }
+
+                classroom.grabCourse(detail.course.id);
+              }}
+            >
               {getButtonLabel(detail.status.phase)}
             </button>
           </div>
