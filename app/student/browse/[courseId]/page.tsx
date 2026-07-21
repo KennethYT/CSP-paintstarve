@@ -2,14 +2,15 @@
 
 import { useMemo } from "react";
 import { notFound, useParams, useRouter } from "next/navigation";
-import { buildPeriodLabel, dayLabel, getButtonLabel, getButtonStyle, getFillPct, getStatus } from "@/lib/course-utils";
+import { buildPeriodLabel, dayLabel, getButtonLabel, getButtonStyle, getFillPct, getStatus, resolveRouteCourseId } from "@/lib/course-utils";
 import { useClassroom } from "@/components/classroom-store";
 
 export default function StudentCourseDetailPage() {
   const classroom = useClassroom();
   const router = useRouter();
   const params = useParams<{ courseId: string }>();
-  const course = classroom.courses.find((item) => item.id === params.courseId);
+  const routeCourseId = resolveRouteCourseId(params.courseId);
+  const course = classroom.courses.find((item) => item.id === routeCourseId);
 
   const detail = useMemo(() => {
     if (!course) {

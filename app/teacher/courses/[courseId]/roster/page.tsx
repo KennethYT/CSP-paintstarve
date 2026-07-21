@@ -2,12 +2,14 @@
 
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useClassroom } from "@/components/classroom-store";
+import { resolveRouteCourseId } from "@/lib/course-utils";
 
 export default function TeacherRosterPage() {
   const classroom = useClassroom();
   const router = useRouter();
   const params = useParams<{ courseId: string }>();
-  const course = classroom.courses.find((item) => item.id === params.courseId && item.teacher === classroom.userName);
+  const routeCourseId = resolveRouteCourseId(params.courseId);
+  const course = classroom.courses.find((item) => item.id === routeCourseId && item.teacher === classroom.userName);
 
   if (!course) {
     notFound();

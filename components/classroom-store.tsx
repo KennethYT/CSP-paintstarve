@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { seedCourses } from "@/lib/demo-data";
-import { getStatus } from "@/lib/course-utils";
+import { buildTeacherSeedCourseId, getStatus } from "@/lib/course-utils";
 import type { Course, EnrollmentState, ModalState, Role, ToastState } from "@/lib/types";
 
 type ClassroomState = {
@@ -114,7 +114,7 @@ export function ClassroomProvider({ children }: Readonly<{ children: React.React
 
           nextCourses = current.courses.concat([
             {
-              id: `seed-${name}`,
+              id: buildTeacherSeedCourseId(name),
               title: "示範課程：專題研究方法",
               teacher: name,
               category: "資訊",

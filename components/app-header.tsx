@@ -26,10 +26,10 @@ export function AppHeader({
   return (
     <header className="glass-panel" style={{ position: "sticky", top: 0, zIndex: 20, borderLeft: 0, borderRight: 0, borderTop: 0 }}>
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <BrandLogo size={34} priority />
           <div style={{ fontSize: 18, fontWeight: 900 }}>{BRAND_NAME}</div>
-        </div>
+        </Link>
 
         <nav style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {tabs.map((tab) => {

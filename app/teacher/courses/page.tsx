@@ -37,7 +37,7 @@ export default function TeacherCoursesPage() {
                 </div>
               </div>
               <span style={{ fontSize: 12, fontWeight: 900, color: status.color }}>{status.label}</span>
-              <Link className="btn" href={`/teacher/courses/${course.id}/roster`} style={{ border: "1.5px solid var(--brand)", color: "var(--brand)", background: "#fff", fontWeight: 900, padding: "8px 14px" }}>
+              <Link className="btn" href={`/teacher/courses/${encodeURIComponent(course.id)}/roster`} style={{ border: "1.5px solid var(--brand)", color: "var(--brand)", background: "#fff", fontWeight: 900, padding: "8px 14px" }}>
                 查看名單
               </Link>
             </div>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { categories, dayLabels, periods, seedCourses } from "@/lib/demo-data";
 import {
+  buildTeacherSeedCourseId,
   buildPeriodLabel,
   dayLabel,
   getBarColor,
@@ -226,7 +227,7 @@ export function ClassroomApp() {
 
         nextCourses = current.courses.concat([
           {
-            id: `seed-${name}`,
+            id: buildTeacherSeedCourseId(name),
             title: "示範課程：專題研究方法",
             teacher: name,
             category: "資訊",

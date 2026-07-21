@@ -81,6 +81,19 @@ export function getBarColor(enrolled: number, capacity: number) {
   return enrolled >= capacity ? "#B91C1C" : "#1D4ED8";
 }
 
+export function buildTeacherSeedCourseId(name: string) {
+  // Keep route segments ASCII-safe so names like Chinese or symbols do not break dynamic routes.
+  return `seed-${encodeURIComponent(name.trim())}`;
+}
+
+export function resolveRouteCourseId(rawCourseId: string) {
+  try {
+    return decodeURIComponent(rawCourseId);
+  } catch {
+    return rawCourseId;
+  }
+}
+
 export function getDayCells(courses: Course[], enrollments: Record<string, EnrollmentState>) {
   return periods.map((period, periodIndex) => ({
     label: period.label,

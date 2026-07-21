@@ -58,7 +58,7 @@ export default function StudentBrowsePage() {
 
           return (
             <article key={course.id} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-              <Link href={`/student/browse/${course.id}`} style={{ cursor: "pointer" }}>
+              <Link href={`/student/browse/${encodeURIComponent(course.id)}`} style={{ cursor: "pointer" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ fontWeight: 900, fontSize: 16, lineHeight: 1.35 }}>{course.title}</div>
                   <span className="badge" style={{ background: "#F3F4F6", color: "#4B5563" }}>{course.category}</span>
