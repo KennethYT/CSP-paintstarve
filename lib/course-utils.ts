@@ -82,11 +82,14 @@ export function getBarColor(enrolled: number, capacity: number) {
 }
 
 export function buildTeacherSeedCourseId(name: string) {
-  // Keep route segments ASCII-safe so names like Chinese or symbols do not break dynamic routes.
-  return `seed-${encodeURIComponent(name.trim())}`;
+  // Use the raw name directly in the ID. URL encoding is handled at the Link/href
+  // level so we avoid double-encoding when the ID passes through encodeURIComponent.
+  return `seed-${name.trim()}`;
 }
 
 export function resolveRouteCourseId(rawCourseId: string) {
+  // Next.js useParams already decodes the dynamic segment, so return as-is.
+  // We keep a try/catch for safety in case of malformed percent sequences.
   try {
     return decodeURIComponent(rawCourseId);
   } catch {
