@@ -29,7 +29,7 @@ export default function TeacherCreateCoursePage() {
       <div className="section-title" style={{ marginBottom: 20 }}>建立課程</div>
 
       <div className="card" style={{ padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
-        <Field label="課程名稱">
+        <Field label="課程名稱" style ={{ color: "var(--subtitle)" }}>
           <input className="input" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="例如：資料結構與演算法" />
         </Field>
 
