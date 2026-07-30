@@ -72,8 +72,12 @@ export type CreateCourseForm = {
 };
 
 export type ToastState = { message: string } | null;
+
+/** 對話框圖示的種類，實際的圖示元件在 components/icons.tsx 對應 */
+export type ModalIconKind = "success" | "waitlist" | "removed";
+
 export type ModalState =
-  | { icon: string; title: string; body: string }
+  | { icon: ModalIconKind; title: string; body: string }
   | null;
 
 export type Period = {

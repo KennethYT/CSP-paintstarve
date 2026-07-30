@@ -4,6 +4,7 @@ import Link from "next/link";
 import { buildPeriodLabel, dayLabel, getFillPct, getStatus } from "@/lib/course-utils";
 import { useClassroom } from "@/components/classroom-store";
 import { CourseDataBoundary } from "@/components/course-states";
+import { LocationIcon } from "@/components/icons";
 
 export default function TeacherCoursesPage() {
   const classroom = useClassroom();
@@ -40,8 +41,12 @@ export default function TeacherCoursesPage() {
                 <div key={course.id} className="card course-card__footer" style={{ padding: 18 }}>
                   <div style={{ minWidth: 220, flex: 1 }}>
                     <div style={{ fontWeight: 900, fontSize: 15.5 }}>{course.title}</div>
-                    <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                      {dayLabel(course.day)} {buildPeriodLabel(course.periodIndex)} · 📍 {course.location}
+                    <div className="muted course-card__meta--icon" style={{ fontSize: 13, marginTop: 4 }}>
+                      <span>
+                        {dayLabel(course.day)} {buildPeriodLabel(course.periodIndex)} ·
+                      </span>
+                      <LocationIcon aria-hidden="true" />
+                      {course.location}
                     </div>
                   </div>
 

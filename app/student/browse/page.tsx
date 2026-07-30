@@ -14,6 +14,7 @@ import {
 } from "@/lib/course-utils";
 import { useClassroom } from "@/components/classroom-store";
 import { CourseDataBoundary } from "@/components/course-states";
+import { CheckIcon, LocationIcon } from "@/components/icons";
 
 export default function StudentBrowsePage() {
   const classroom = useClassroom();
@@ -86,8 +87,9 @@ export default function StudentBrowsePage() {
                     <div className="course-card__meta">
                       {course.teacher} 老師 · {dayLabel(course.day)} {buildPeriodLabel(course.periodIndex)}
                     </div>
-                    <div className="course-card__meta" style={{ marginTop: 2 }}>
-                      📍 {course.location}
+                    <div className="course-card__meta course-card__meta--icon" style={{ marginTop: 2 }}>
+                      <LocationIcon aria-hidden="true" />
+                      {course.location}
                     </div>
                   </Link>
 
@@ -117,6 +119,7 @@ export default function StudentBrowsePage() {
 
                   <div className="course-card__footer">
                     <span className="status-text" data-phase={status.phase}>
+                      {status.phase === "my-enrolled" ? <CheckIcon aria-hidden="true" /> : null}
                       {status.label}
                     </span>
                     <button

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { categories, dayLabels, periods } from "@/lib/course-constants";
 import type { CourseCategory, OpenMode } from "@/lib/types";
 import { useClassroom } from "@/components/classroom-store";
+import { BackIcon } from "@/components/icons";
 
 function resolveOpenAt(mode: OpenMode) {
   const now = Date.now();
@@ -68,7 +69,8 @@ export default function TeacherCreateCoursePage() {
   return (
     <section style={{ maxWidth: 640 }}>
       <Link href="/teacher/courses" className="btn btn-link" style={{ marginBottom: 16 }}>
-        ← 回到我的課程
+        <BackIcon aria-hidden="true" />
+        回到我的課程
       </Link>
       <h1 className="section-title" style={{ marginBottom: 20 }}>
         建立課程

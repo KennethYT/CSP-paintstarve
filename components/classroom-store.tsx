@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { ModalIconGraphic } from "@/components/icons";
 import type {
   Course,
   CreateCoursePayload,
@@ -152,13 +153,13 @@ export function ClassroomProvider({
 
         if (result && "status" in result && result.status === "waitlist") {
           setConfirmModal({
-            icon: "⏳",
+            icon: "waitlist",
             title: "已加入候補",
             body: `「${course?.title ?? "課程"}」目前候補排序第 ${result.position} 位，有人退選時將依序遞補。`
           });
         } else {
           setConfirmModal({
-            icon: "🎉",
+            icon: "success",
             title: "搶課成功",
             body: `已為你保留「${course?.title ?? "課程"}」的座位，可至「我的課表」查看。`
           });
@@ -195,7 +196,7 @@ export function ClassroomProvider({
         const wasWaitlist = result && "cancelled" in result && result.cancelled === "waitlist";
 
         setConfirmModal({
-          icon: "🗑️",
+          icon: "removed",
           title: wasWaitlist ? "已取消候補" : "已取消選課",
           body: wasWaitlist
             ? `已取消「${course?.title ?? "課程"}」的候補資格。`
@@ -288,8 +289,8 @@ function ConfirmModal({ modal, onDismiss }: Readonly<{ modal: NonNullable<ModalS
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="classroom-modal-title">
       <div className="card modal-card fade-up">
-        <div className="modal-card__icon" aria-hidden="true">
-          {modal.icon}
+        <div className="modal-card__icon" data-icon={modal.icon}>
+          <ModalIconGraphic icon={modal.icon} />
         </div>
         <div className="modal-card__title" id="classroom-modal-title">
           {modal.title}

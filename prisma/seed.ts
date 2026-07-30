@@ -256,7 +256,8 @@ async function main() {
   console.log(`\n完成：${courseCount} 門課程、${enrollmentCount} 筆選課紀錄。`);
   console.log(
     `示範帳號：teacher1..teacher${teacherIds.size}@example.edu、student1..student${studentIds.length}@example.edu。` +
-      "\n這些帳號沒有密碼，只用來讓課程有真實的選課紀錄；請自行從 /register 註冊可登入的帳號。"
+      "\n這些帳號沒有綁定 Discord，無法登入，只用來讓課程有真實的選課紀錄。" +
+      "\n要實際操作請從 /login 用 Discord 登入。"
   );
 }
 

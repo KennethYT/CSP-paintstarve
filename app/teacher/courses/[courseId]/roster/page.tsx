@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/session";
 import { CourseError, getCourse, getRoster } from "@/lib/course-service";
+import { BackIcon } from "@/components/icons";
 
 /**
  * Server component：名單直接在伺服器端取，不經過瀏覽器 API 呼叫。
@@ -40,7 +41,8 @@ export default async function TeacherRosterPage({
   return (
     <section>
       <Link href="/teacher/courses" className="btn btn-link" style={{ marginBottom: 16 }}>
-        ← 回到我的課程
+        <BackIcon aria-hidden="true" />
+        回到我的課程
       </Link>
 
       {error || !content || !roster ? (

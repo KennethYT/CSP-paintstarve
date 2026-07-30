@@ -330,11 +330,34 @@ a {
   transform: none;
 }
 
+/* Discord 是唯一的登入路徑，按鈕直接用 Discord 的品牌色好辨識。 */
+.btn-discord {
+  width: 100%;
+  background: #5865f2;
+  color: #ffffff;
+  padding: 13px 16px;
+  font-weight: 900;
+  font-size: 14px;
+  box-shadow: 0 12px 28px rgba(88, 101, 242, 0.28);
+}
+
+.btn-discord:hover {
+  background: #4752c4;
+}
+
+.btn-discord__icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
 /* ---------------------------------------------------------------
    課程狀態
    --------------------------------------------------------------- */
 
 .status-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   font-weight: 900;
 }
@@ -472,6 +495,14 @@ a {
   margin-top: 6px;
 }
 
+/* 帶圖示的那一行：讓地點圖示與文字對齊，窄螢幕時可換行。 */
+.course-card__meta--icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .course-card__footer {
   display: flex;
   align-items: center;
@@ -599,6 +630,11 @@ a {
   margin-bottom: 12px;
 }
 
+/* 圖示尺寸靠上面的 font-size 繼承（react-icons 預設 1em），這裡只決定顏色。 */
+.modal-card__icon[data-icon="success"] { color: var(--status-enrolled); }
+.modal-card__icon[data-icon="waitlist"] { color: var(--status-waitlist); }
+.modal-card__icon[data-icon="removed"] { color: var(--status-full); }
+
 .modal-card__title {
   font-size: 20px;
   font-weight: 900;
@@ -698,6 +734,9 @@ a {
 }
 
 .timetable__conflict {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 900;
   color: var(--status-full);
@@ -740,6 +779,22 @@ a {
   line-height: 1.2;
 }
 
+.detail-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  line-height: 1.7;
+  margin-top: 8px;
+}
+
+.detail-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .detail-section {
   margin-top: 24px;
 }
@@ -769,8 +824,12 @@ a {
   line-height: 1.8;
 }
 
+/* 條目可能折成多行，圖示要固定貼齊第一行而不是被拉長置中。 */
 .detail-syllabus__marker {
   color: var(--subtitle);
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 5px;
 }
 
 .detail-meter {
@@ -806,24 +865,8 @@ a {
 }
 
 /* ---------------------------------------------------------------
-   登入 / 註冊 表單的補充樣式
+   登入頁的補充樣式
    --------------------------------------------------------------- */
-
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.auth-divider::before,
-.auth-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.12);
-}
 
 .auth-message {
   font-size: 12.5px;
@@ -837,27 +880,6 @@ a {
   background: #2b1616;
   color: #fca5a5;
   border: 1px solid #7f1d1d;
-}
-
-.auth-message--notice {
-  background: #16241f;
-  color: var(--status-enrolled);
-  border: 1px solid #245244;
-}
-
-.auth-switch {
-  font-size: 13px;
-  color: var(--muted);
-  margin: 0;
-}
-
-.auth-switch a {
-  color: var(--subtitle);
-  font-weight: 800;
-}
-
-.auth-switch a:hover {
-  text-decoration: underline;
 }
 
 /* ---------------------------------------------------------------
@@ -1188,77 +1210,6 @@ a {
   color: #9ca3af;
 }
 
-.login-role-list {
-  display: grid;
-  gap: 10px;
-}
-
-.login-role-card {
-  width: 100%;
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 15px 16px;
-  border-radius: 16px;
-  border: 1.5px solid #323232;
-  background: #171717;
-  color: #f2f2f2;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.login-role-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.32);
-}
-
-.login-role-card[data-active="true"] {
-  border-color: #6b7280;
-  background: #242424;
-}
-
-.login-role-card__icon {
-  font-size: 22px;
-  line-height: 1;
-}
-
-.login-role-card__title {
-  display: block;
-  font-size: 14px;
-  font-weight: 800;
-  margin-bottom: 4px;
-}
-
-.login-role-card__text {
-  display: block;
-  font-size: 12px;
-  color: #a3a3a3;
-  line-height: 1.6;
-}
-
-.login-form-block {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.login-form-block__label {
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.login-form-block__input {
-  min-height: 46px;
-}
-
-.login-form-block__button {
-  width: 100%;
-  margin-top: 6px;
-  padding: 13px 12px;
-  font-weight: 900;
-}
-
 .login-automation-note {
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -1413,9 +1364,5 @@ a {
 
   .login-sidebar__brand-title {
     font-size: 24px;
-  }
-
-  .login-role-card {
-    padding: 14px;
   }
 }

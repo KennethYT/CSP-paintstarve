@@ -37,7 +37,7 @@ export function formatCountdown(ms: number) {
 export function getStatus(course: Course, now: number, enrollment?: EnrollmentState): CourseStatus {
   if (enrollment) {
     if (enrollment.status === "enrolled") {
-      return { phase: "my-enrolled", label: "✓ 已搶到" };
+      return { phase: "my-enrolled", label: "已搶到" };
     }
 
     return { phase: "my-waitlist", label: `候補中 第${enrollment.position}位` };

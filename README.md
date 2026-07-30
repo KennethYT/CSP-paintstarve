@@ -2,7 +2,7 @@
 
 大學選課／搶課系統。學生在開放時間瞬間搶有限名額、額滿自動排候補；教師開課、管理名單、看儀表板。
 
-以 **Next.js 16（App Router）+ React 19 + TypeScript + Prisma + PostgreSQL** 打造，登入使用 **better-auth**，並支援用 Discord 伺服器身份組自動辨識學生／教師身分。
+以 **Next.js 16（App Router）+ React 19 + TypeScript + Prisma + PostgreSQL** 打造，登入使用 **better-auth**，身分一律由 Discord 伺服器的身份組自動辨識。
 
 ## 功能
 
@@ -18,25 +18,29 @@
 - 儀表板：總課程數、選課人次、候補人數、平均額滿率、熱門課程排行
 
 **登入**
-- Email／密碼註冊登入，註冊時選擇學生或教師身分
-- Discord OAuth：由機器人檢查使用者在指定伺服器的身份組，自動指派角色
+- 只有 Discord 一種登入方式，不開放自行註冊帳號
+- 機器人檢查使用者在指定伺服器的身份組，據此指派學生或教師角色
+- 沒有對應身份組的人登入會被擋下，並提示聯絡管理員
 
 ## 開始開發
 
-需要 Node.js 20+、pnpm，以及一個 PostgreSQL 資料庫。
+需要 Node.js 20+、pnpm、一個 PostgreSQL 資料庫，以及一組可用的 Discord 應用程式與機器人
+（因為 Discord 是唯一的登入方式，沒有它就無法登入系統）。
 
 ```bash
 pnpm install
-cp .env.example .env      # 填入 DATABASE_URL 與 BETTER_AUTH_SECRET
+cp .env.example .env      # 填入 DATABASE_URL、BETTER_AUTH_SECRET 與 DISCORD_*
 pnpm db:push              # 建立資料表
 pnpm db:seed              # 匯入 7 門示範課程與選課紀錄
 pnpm dev
 ```
 
-打開 http://localhost:3000 ，從 `/register` 註冊一個帳號即可開始。
+打開 http://localhost:3000 ，按「使用 Discord 登入」。你的 Discord 帳號必須已經在
+`DISCORD_GUILD_ID` 指定的伺服器裡，並持有 `DISCORD_TEACHER_ROLE_ID` 或
+`DISCORD_STUDENT_ROLE_ID` 其中一個身份組，否則會被擋在登入頁。
 
-> `pnpm db:seed` 建立的示範帳號（`teacher1@example.edu`、`student1@example.edu` …）**沒有密碼**，
-> 它們只是用來讓課程有真實的選課人數與候補名單，無法登入。請自行註冊可登入的帳號。
+> `pnpm db:seed` 建立的示範帳號（`teacher1@example.edu`、`student1@example.edu` …）**無法登入**，
+> 它們沒有綁定 Discord 帳號，只是用來讓課程有真實的選課人數與候補名單。
 
 ### 指令
 
@@ -51,21 +55,20 @@ pnpm dev
 
 ### 環境變數
 
-見 `.env.example`。`DATABASE_URL` 與 `BETTER_AUTH_SECRET` 是必填；Discord 相關變數不填的話，
-Discord 登入按鈕會失效，但 Email／密碼登入不受影響。
+見 `.env.example`，全部都是必填。`DISCORD_*` 沒設定的話登入按鈕會失效，而且沒有其他登入方式，
+等於整個系統無法使用。
 
 ## 架構
 
 ```
 app/
   page.tsx                      依登入身分導向對應入口
-  login/  register/             認證頁（共用 components/auth-hero.tsx 的版面）
+  login/                        登入頁（版面在 components/auth-hero.tsx）
   discord/complete/             Discord OAuth 回呼，伺服器端解析身份組後導向
   student/                      學生區（layout 做角色把關）
   teacher/                      教師區（layout 做角色把關）
   api/
     auth/[...all]/              better-auth
-    register/                   註冊，並由伺服器指派 role
     courses/                    課程列表／建立
     courses/[courseId]/enroll/  搶課（POST）與退選（DELETE）
     courses/[courseId]/roster/  選課名單（僅授課教師）
@@ -110,8 +113,8 @@ await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${courseId}, 
    `requireRole()` 做權威把關，關掉 JS 也繞不過
 3. 每個 API route 各自驗證 session 與角色
 
-使用者的 `role` 在 better-auth 設為 `input: false`，只有註冊 API 與 Discord 身份組解析能寫入，
-使用者無法自行把自己改成教師。
+使用者的 `role` 在 better-auth 設為 `input: false`，全專案只有 Discord 身份組解析
+（`lib/discord.ts`）會寫入它，使用者無法透過 update-user 端點自行把自己改成教師。
 
 選課名單不會隨課程列表送到瀏覽器，只有授課教師能透過 `/api/courses/[courseId]/roster` 取得。
 
@@ -120,5 +123,5 @@ await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${courseId}, 
 任何支援 Next.js 與 PostgreSQL 的平台都可以。設定好 `DATABASE_URL`、`BETTER_AUTH_SECRET`、
 `BETTER_AUTH_URL`（要是正式網址）後執行 `pnpm db:push` 建表即可。
 
-使用 Discord 登入的話，記得把 `<你的網址>/api/auth/callback/discord` 加進 Discord 應用程式的
-OAuth2 Redirect URI。
+記得把 `<你的網址>/api/auth/callback/discord` 加進 Discord 應用程式的 OAuth2 Redirect URI，
+否則登入會失敗。

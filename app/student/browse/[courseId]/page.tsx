@@ -13,6 +13,7 @@ import {
 } from "@/lib/course-utils";
 import { useClassroom } from "@/components/classroom-store";
 import { CourseDataBoundary } from "@/components/course-states";
+import { BackIcon, BulletIcon, CheckIcon, LocationIcon } from "@/components/icons";
 
 export default function StudentCourseDetailPage() {
   const classroom = useClassroom();
@@ -22,7 +23,8 @@ export default function StudentCourseDetailPage() {
   return (
     <section>
       <Link href="/student/browse" className="btn btn-link" style={{ marginBottom: 16 }}>
-        ← 回到課程列表
+        <BackIcon aria-hidden="true" />
+        回到課程列表
       </Link>
 
       <CourseDataBoundary
@@ -73,9 +75,14 @@ function CourseDetail({ courseId }: Readonly<{ courseId: string }>) {
           </span>
         ) : null}
         <h1 className="detail-card__title">{course.title}</h1>
-        <div className="muted" style={{ fontSize: 14, marginTop: 8, lineHeight: 1.7 }}>
-          {course.teacher} 老師 · {dayLabel(course.day)} {buildPeriodLabel(course.periodIndex)} · 📍{" "}
-          {course.location}
+        <div className="muted detail-card__meta">
+          <span>
+            {course.teacher} 老師 · {dayLabel(course.day)} {buildPeriodLabel(course.periodIndex)}
+          </span>
+          <span className="detail-card__meta-item">
+            <LocationIcon aria-hidden="true" />
+            {course.location}
+          </span>
         </div>
       </div>
 
@@ -92,9 +99,7 @@ function CourseDetail({ courseId }: Readonly<{ courseId: string }>) {
           <div className="detail-syllabus">
             {course.syllabus.map((item) => (
               <div key={item} className="detail-syllabus__item">
-                <span className="detail-syllabus__marker" aria-hidden="true">
-                  ▸
-                </span>
+                <BulletIcon className="detail-syllabus__marker" aria-hidden="true" />
                 <span>{item}</span>
               </div>
             ))}
@@ -127,6 +132,7 @@ function CourseDetail({ courseId }: Readonly<{ courseId: string }>) {
         </div>
         <div className="course-card__footer">
           <span className="status-text" data-phase={status.phase} style={{ fontSize: 14 }}>
+            {status.phase === "my-enrolled" ? <CheckIcon aria-hidden="true" /> : null}
             {status.label}
           </span>
           <button

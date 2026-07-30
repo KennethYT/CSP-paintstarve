@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { BRAND_LOGO_SRC, BRAND_NAME, BrandLogo } from "@/components/brand";
 
 /**
- * 登入 / 註冊共用的左側視覺 + 右側側欄外框。
- * 版面沿用原本 app/login/page.tsx 的 hero 設計，只是抽出來讓兩頁共用。
+ * 登入頁的左側視覺 + 右側側欄外框。
+ * 版面與內容分開，登入表單本身由 app/login/page.tsx 以 children 傳入。
  */
 export function AuthHero({
   title,

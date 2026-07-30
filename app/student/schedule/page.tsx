@@ -5,6 +5,7 @@ import { dayLabels } from "@/lib/course-constants";
 import { buildPeriodLabel, dayLabel, getDayCells } from "@/lib/course-utils";
 import { useClassroom } from "@/components/classroom-store";
 import { CourseDataBoundary } from "@/components/course-states";
+import { AlertIcon } from "@/components/icons";
 
 export default function StudentSchedulePage() {
   const classroom = useClassroom();
@@ -87,7 +88,10 @@ export default function StudentSchedulePage() {
                           </div>
                         ))}
                         {entries.length > 1 ? (
-                          <div className="timetable__conflict">⚠ 此時段撞堂</div>
+                          <div className="timetable__conflict">
+                            <AlertIcon aria-hidden="true" />
+                            此時段撞堂
+                          </div>
                         ) : null}
                       </div>
                     ))}

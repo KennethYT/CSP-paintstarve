@@ -3,50 +3,32 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "@/lib/prisma";
 
-const socialProviders = {
-  ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
-    ? {
-        github: {
-          clientId: process.env.GITHUB_CLIENT_ID,
-          clientSecret: process.env.GITHUB_CLIENT_SECRET
-        }
-      }
-    : {}),
-  ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-    ? {
-        google: {
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET
-        }
-      }
-    : {}),
-  ...(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET
+/**
+ * Discord 是唯一的登入方式。其他 OAuth 供應商不註冊 —— 它們無法解析校內身份組，
+ * 登入後只會產生沒有 role、進不了任何頁面的帳號。
+ */
+const socialProviders =
+  process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET
     ? {
         discord: {
           clientId: process.env.DISCORD_CLIENT_ID,
           clientSecret: process.env.DISCORD_CLIENT_SECRET
         }
       }
-    : {})
-};
+    : {};
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     // 必須與 prisma/schema.prisma 的 datasource provider 一致
     provider: "postgresql"
   }),
-  emailAndPassword: {
-    enabled: true,
-    // 這是課程選課系統的示範專案，不接寄信服務，故不強制驗證信箱
-    requireEmailVerification: false,
-    minPasswordLength: 8
-  },
+  // 身分一律由 Discord 伺服器的身份組決定，不開放 Email/密碼註冊登入
   user: {
     additionalFields: {
       role: {
         type: "string",
         required: false,
-        // 角色只能由伺服器決定：註冊 API 或 Discord 身份組解析。
+        // 角色只能由 Discord 身份組解析寫入（見 lib/discord.ts）。
         // 設為 false 可阻止使用者透過 update-user 端點自行把自己改成 teacher。
         input: false
       }
