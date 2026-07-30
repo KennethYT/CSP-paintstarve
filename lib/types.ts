@@ -1,13 +1,4 @@
 export type Role = "student" | "teacher";
-export type Screen =
-  | "login"
-  | "browse"
-  | "detail"
-  | "schedule"
-  | "courses"
-  | "create"
-  | "dashboard"
-  | "roster";
 
 export type CourseCategory =
   | "資訊"
@@ -23,10 +14,15 @@ export type EnrollmentState =
   | { status: "enrolled" }
   | { status: "waitlist"; position: number };
 
+/**
+ * 送到瀏覽器的課程資料。刻意不含選課學生名單 — 名單只有授課教師能透過
+ * GET /api/courses/[courseId]/roster 取得，避免把全校學生姓名送到每個人的瀏覽器。
+ */
 export type Course = {
   id: string;
   title: string;
   teacher: string;
+  teacherId: string;
   category: CourseCategory;
   day: number;
   periodIndex: number;
@@ -34,11 +30,33 @@ export type Course = {
   description: string;
   syllabus: string[];
   capacity: number;
+  /** 由 Enrollment 即時計數得出，非資料庫欄位 */
   enrolled: number;
+  waitlistCount: number;
+  /** epoch milliseconds */
   openAt: number;
   hot: boolean;
-  enrolledStudents: Array<{ name: string; id: string }>;
-  waitlist: Array<{ name: string; position: number }>;
+};
+
+export type RosterEntry = { id: string; name: string };
+export type WaitlistEntry = { id: string; name: string; position: number };
+
+export type CourseRoster = {
+  courseId: string;
+  enrolledStudents: RosterEntry[];
+  waitlist: WaitlistEntry[];
+};
+
+export type CreateCoursePayload = {
+  title: string;
+  category: CourseCategory;
+  description: string;
+  syllabus: string[];
+  day: number;
+  periodIndex: number;
+  location: string;
+  capacity: number;
+  openAt: number;
 };
 
 export type CreateCourseForm = {
@@ -58,9 +76,13 @@ export type ModalState =
   | { icon: string; title: string; body: string }
   | null;
 
-export type LoginChoice = Role | null;
-
 export type Period = {
   label: string;
   time: string;
+};
+
+export type SessionUser = {
+  id: string;
+  name: string;
+  role: Role;
 };

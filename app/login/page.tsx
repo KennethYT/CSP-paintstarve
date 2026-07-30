@@ -1,221 +1,186 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BRAND_LOGO_SRC, BRAND_NAME, BrandLogo } from "@/components/brand";
-import { useClassroom } from "@/components/classroom-store";
+import { AuthHero } from "@/components/auth-hero";
 import { authClient } from "@/lib/auth-client";
+import type { Role } from "@/lib/types";
 
-type DiscordResolveResult = {
-  ok: boolean;
-  role?: "student" | "teacher";
-  guildName?: string;
-  displayName?: string;
-  message?: string;
-};
+function landingPath(role: Role) {
+  return role === "teacher" ? "/teacher/courses" : "/student/browse";
+}
 
-export default function LoginPage() {
-  const classroom = useClassroom();
+/** 從網址參數推導出要顯示的訊息，不用 state 保存。 */
+function readUrlMessage(params: URLSearchParams) {
+  const discord = params.get("discord");
+
+  if (discord === "error") {
+    return { error: "Discord OAuth 發生錯誤，請重試或檢查回呼網址設定。", notice: "" };
+  }
+
+  if (discord === "unauthenticated") {
+    return { error: "尚未完成 Discord 登入，請再試一次。", notice: "" };
+  }
+
+  if (discord === "failed") {
+    return {
+      error: params.get("reason") || "Discord 驗證失敗，請聯絡管理員檢查機器人與身份組設定。",
+      notice: ""
+    };
+  }
+
+  if (params.get("registered") === "1") {
+    return { error: "", notice: "註冊成功，請用剛才的帳號密碼登入。" };
+  }
+
+  return { error: "", notice: "" };
+}
+
+function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [choice, setChoice] = useState<"student" | "teacher" | null>(null);
-  const [name, setName] = useState("");
-  const [discordMessage, setDiscordMessage] = useState("");
-  const [isDiscordPending, setIsDiscordPending] = useState(false);
 
-  useEffect(() => {
-    if (classroom.role === "student") {
-      router.replace("/student/browse");
-    }
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState("");
+  const [isPending, setIsPending] = useState(false);
 
-    if (classroom.role === "teacher") {
-      router.replace("/teacher/courses");
-    }
-  }, [classroom.role, router]);
-
-  const resolveDiscordRole = async () => {
-    setIsDiscordPending(true);
-    setDiscordMessage("正在驗證 Discord 伺服器與身份組...");
-
-    try {
-      const session = await authClient.getSession();
-
-      if (!session.data?.user) {
-        setDiscordMessage("尚未登入 Discord，請重新點擊 Discord 登入。");
-        return;
-      }
-
-      const response = await fetch("/api/discord/resolve-role", {
-        method: "POST"
-      });
-      const payload = (await response.json()) as DiscordResolveResult;
-
-      if (!response.ok || !payload.ok || !payload.role) {
-        setDiscordMessage(payload.message ?? "Discord 驗證失敗，請聯絡管理員檢查機械人與身份組設定。");
-        return;
-      }
-
-      const resolvedName = payload.displayName?.trim() || session.data.user.name || "Discord 使用者";
-      classroom.login(payload.role, resolvedName);
-      setDiscordMessage(`已通過 ${payload.guildName ?? "指定伺服器"} 驗證，身份為${payload.role === "teacher" ? "教職員" : "學生"}。`);
-      router.replace(payload.role === "teacher" ? "/teacher/courses" : "/student/browse");
-    } catch {
-      setDiscordMessage("Discord 驗證發生錯誤，請稍後再試。");
-    } finally {
-      setIsDiscordPending(false);
-    }
-  };
-
-  useEffect(() => {
-    const fromDiscord = searchParams.get("discord");
-
-    if (fromDiscord === "1") {
-      void resolveDiscordRole();
-    }
-  }, [searchParams]);
+  const urlMessage = readUrlMessage(searchParams);
+  const error = formError || urlMessage.error;
 
   const handleDiscordLogin = async () => {
-    setDiscordMessage("");
-    setIsDiscordPending(true);
+    setFormError("");
+    setIsPending(true);
 
     try {
       await authClient.signIn.social({
         provider: "discord",
-        callbackURL: "/login?discord=1",
+        // 身份組解析在 /discord/complete 這個 server component 內完成
+        callbackURL: "/discord/complete",
         errorCallbackURL: "/login?discord=error"
       });
     } catch {
-      setDiscordMessage("無法啟動 Discord OAuth，請檢查 DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET。");
-      setIsDiscordPending(false);
+      setFormError("無法啟動 Discord OAuth，請檢查 DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET。");
+      setIsPending(false);
     }
   };
 
-  useEffect(() => {
-    const hasError = searchParams.get("discord") === "error";
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError("");
+    setIsPending(true);
 
-    if (hasError) {
-      setDiscordMessage("Discord OAuth 發生錯誤，請重試或檢查回呼網址設定。");
-      setIsDiscordPending(false);
-    }
-  }, [searchParams]);
+    const { error: signInError } = await authClient.signIn.email({
+      email: email.trim().toLowerCase(),
+      password
+    });
 
-  const handleLogin = () => {
-    if (!choice) {
+    if (signInError) {
+      setFormError(signInError.message ?? "登入失敗，請確認 Email 與密碼。");
+      setIsPending(false);
       return;
     }
 
-    const resolvedName = name.trim() || (choice === "teacher" ? "示範老師" : "示範學生");
-    classroom.login(choice, resolvedName);
-    router.push(choice === "teacher" ? "/teacher/courses" : "/student/browse");
+    const session = await authClient.getSession();
+    const role = (session.data?.user as { role?: Role } | undefined)?.role;
+
+    if (!role) {
+      setFormError("此帳號尚未指派身分，請聯絡管理員或改用 Discord 驗證登入。");
+      setIsPending(false);
+      return;
+    }
+
+    router.replace(landingPath(role));
+    router.refresh();
+    setIsPending(false);
   };
 
   return (
-    <div className="login-page">
-      <section className="login-hero fade-up">
-        <div className="login-hero__glow login-hero__glow--pink" />
-        <div className="login-hero__glow login-hero__glow--gold" />
-        <div className="login-hero__glow login-hero__glow--green" />
-        <div className="login-hero__ribbon login-hero__ribbon--top" />
-        <div className="login-hero__ribbon login-hero__ribbon--middle" />
-        <div className="login-hero__ribbon login-hero__ribbon--bottom" />
+    <AuthHero
+      title="SIGN IN"
+      subtitle="登入"
+      sidebarText="請以校園帳號登入，或透過 Discord 伺服器身份組自動辨識身分。"
+    >
+      <button
+        type="button"
+        className="login-role-card"
+        onClick={() => void handleDiscordLogin()}
+        disabled={isPending}
+      >
+        <span className="login-role-card__icon" aria-hidden="true">
+          🤖
+        </span>
+        <span>
+          <strong className="login-role-card__title">Discord 驗證登入</strong>
+          <span className="login-role-card__text">由機器人檢查伺服器與身份組後自動分流</span>
+        </span>
+      </button>
 
-        <div className="login-hero__content">
-          <div className="login-hero__eyebrow">Course Selection Platform</div>
-          <div className="login-hero__title">SIGN IN</div>
-          <div className="login-hero__subtitle">登入</div>
-        </div>
+      <div className="auth-divider">
+        <span>或使用 Email 登入</span>
+      </div>
 
-        <div className="login-hero__artboard">
-          <div className="login-hero__panel login-hero__panel--primary">
-            <div className="login-hero__panel-grid" />
-            <div className="login-hero__panel-orb" />
-          </div>
-          <div className="login-hero__panel login-hero__panel--secondary">
-            <div className="login-hero__crest-wrap">
-              <Image
-                src={BRAND_LOGO_SRC}
-                alt="校徽"
-                fill
-                className="login-hero__crest"
-                sizes="(max-width: 960px) 45vw, 420px"
-                priority
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+      <form className="login-form-block" onSubmit={handleSubmit}>
+        <label className="login-form-block__label" htmlFor="login-email">
+          Email
+        </label>
+        <input
+          id="login-email"
+          className="input login-form-block__input"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="student@example.edu"
+        />
 
-      <aside className="login-sidebar">
-        <div className="login-sidebar__inner">
-          <div className="login-sidebar__brand">
-            <div className="login-sidebar__logo-wrap">
-              <BrandLogo size={96} className="login-sidebar__logo" priority />
-            </div>
-            <div>
-              <div className="login-sidebar__brand-title">{BRAND_NAME}</div>
-              <div className="login-sidebar__brand-text">Please choose your role and enter your display name.</div>
-              <div className="login-sidebar__brand-text">請選擇身分，並輸入登入名稱。</div>
-            </div>
-          </div>
+        <label className="login-form-block__label" htmlFor="login-password">
+          密碼
+        </label>
+        <input
+          id="login-password"
+          className="input login-form-block__input"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="••••••••"
+        />
 
-          <div className="login-role-list">
-            <button className="login-role-card" onClick={() => void handleDiscordLogin()} disabled={isDiscordPending}>
-              <span className="login-role-card__icon">🤖</span>
-              <span>
-                <strong className="login-role-card__title">Discord 驗證登入</strong>
-                <span className="login-role-card__text">用機械人檢查伺服器與身份組後自動分流</span>
-              </span>
-            </button>
+        {error ? (
+          <p className="auth-message auth-message--error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {urlMessage.notice && !error ? (
+          <p className="auth-message auth-message--notice">{urlMessage.notice}</p>
+        ) : null}
 
-            <button className="login-role-card" data-active={choice === "student"} onClick={() => setChoice("student")}>
-              <span className="login-role-card__icon">🎓</span>
-              <span>
-                <strong className="login-role-card__title">學生登入</strong>
-                <span className="login-role-card__text">瀏覽課程、搶課、查看課表</span>
-              </span>
-            </button>
+        <button className="btn btn-brand login-form-block__button" type="submit" disabled={isPending}>
+          {isPending ? "登入中…" : "登入"}
+        </button>
+      </form>
 
-            <button className="login-role-card" data-active={choice === "teacher"} onClick={() => setChoice("teacher")}>
-              <span className="login-role-card__icon">🧑‍🏫</span>
-              <span>
-                <strong className="login-role-card__title">教師登入</strong>
-                <span className="login-role-card__text">管理課程、建立課程、查看名單</span>
-              </span>
-            </button>
-          </div>
+      <p className="auth-switch">
+        還沒有帳號？<Link href="/register">立即註冊</Link>
+      </p>
 
-          {discordMessage ? <div className="login-automation-note__text">{discordMessage}</div> : null}
+      <div className="login-sidebar__links">
+        <span>Forgot your password?</span>
+        <span>Change password</span>
+        <span>Helpdesk</span>
+      </div>
+    </AuthHero>
+  );
+}
 
-          {choice ? (
-            <div className="login-form-block">
-              <label className="login-form-block__label">姓名</label>
-              <input
-                className="input login-form-block__input"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder={choice === "teacher" ? "例如：王小明老師" : "例如：王小明同學"}
-              />
-              <button className="btn btn-brand login-form-block__button" onClick={handleLogin}>
-                以{choice === "teacher" ? "教師" : "學生"}身份登入
-              </button>
-            </div>
-          ) : null}
-
-          <div className="login-automation-note">
-            <div className="login-automation-note__title">後續流程註記</div>
-            <div className="login-automation-note__text">
-              本入口後續可接入 DC 機器人代為登入，並依登入身分與使用情境自動分類到對應流程。
-            </div>
-          </div>
-
-          <div className="login-sidebar__links">
-            <span>Forgot your password?</span>
-            <span>Change password</span>
-            <span>Helpdesk</span>
-          </div>
-        </div>
-      </aside>
-    </div>
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

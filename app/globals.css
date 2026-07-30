@@ -1,7 +1,9 @@
 :root {
   --bg: #121212;
   --panel: #1c1c1c;
+  --panel-raised: #232323;
   --border: #2d2d2d;
+  --border-strong: #3a3a3a;
   --text: #f2f2f2;
   --subtitle: #f5bf1d;
   --muted: #a3a3a3;
@@ -10,6 +12,26 @@
   --warning: #facc15;
   --danger: #f87171;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+
+  /* 課程狀態色票。原本這些顏色是淺色主題的深色調（#15803D / #1D4ED8 / #B91C1C），
+     直接寫在 inline style 裡，放到 #121212 背景上幾乎看不見。
+     以下都以深色底為前提挑選，對比度達 WCAG AA。 */
+  --status-upcoming: #9ca3af;
+  --status-upcoming-bg: #232323;
+  --status-open: #93c5fd;
+  --status-open-bg: #16304f;
+  --status-full: #fca5a5;
+  --status-full-bg: #3d1b1b;
+  --status-enrolled: #6ee7b7;
+  --status-enrolled-bg: #10322a;
+  --status-waitlist: #fcd34d;
+  --status-waitlist-bg: #3a2c11;
+
+  /* 進度條軌道 */
+  --track: #2a2a2a;
+
+  --app-max-width: 1180px;
+  --app-gutter: 24px;
 }
 
 * {
@@ -205,6 +227,735 @@ a {
   line-height: 1.15;
   font-weight: 900;
   letter-spacing: -0.04em;
+}
+
+/* ---------------------------------------------------------------
+   應用外框（登入頁以外的所有頁面）
+   --------------------------------------------------------------- */
+
+.app-container {
+  width: 100%;
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  padding-inline: var(--app-gutter);
+}
+
+.app-main {
+  padding-block: 28px 80px;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+}
+
+.app-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 14px;
+  flex-wrap: wrap;
+}
+
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.app-header__brand-name {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.app-header__nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.app-header__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.app-header__user-name {
+  font-size: 14px;
+  font-weight: 800;
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge-role {
+  background: var(--panel-raised);
+  color: #d4d4d4;
+  border: 1px solid var(--border-strong);
+}
+
+.btn-ghost {
+  border: 1px solid var(--border-strong);
+  background: #171717;
+  color: #d4d4d4;
+  padding: 8px 12px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.btn-ghost:hover {
+  background: var(--panel-raised);
+}
+
+.btn-link {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 13px;
+  padding: 6px 0;
+}
+
+.btn-link:hover {
+  color: var(--text);
+  transform: none;
+}
+
+/* ---------------------------------------------------------------
+   課程狀態
+   --------------------------------------------------------------- */
+
+.status-text {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.status-text[data-phase="upcoming"] { color: var(--status-upcoming); }
+.status-text[data-phase="open"] { color: var(--status-open); }
+.status-text[data-phase="full"] { color: var(--status-full); }
+.status-text[data-phase="my-enrolled"] { color: var(--status-enrolled); }
+.status-text[data-phase="my-waitlist"] { color: var(--status-waitlist); }
+
+.btn-status {
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 13px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.btn-status[data-phase="upcoming"] {
+  background: var(--status-upcoming-bg);
+  color: var(--status-upcoming);
+  border-color: var(--border-strong);
+}
+
+.btn-status[data-phase="open"] {
+  background: var(--status-open-bg);
+  color: var(--status-open);
+  border-color: #1e4a78;
+}
+
+.btn-status[data-phase="full"] {
+  background: var(--status-waitlist-bg);
+  color: var(--status-waitlist);
+  border-color: #7c5a12;
+}
+
+.btn-status[data-phase="my-enrolled"] {
+  background: #2b1c1c;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+.btn-status[data-phase="my-waitlist"] {
+  background: #29211a;
+  color: #fdba74;
+  border-color: #9a3412;
+}
+
+.badge-category {
+  background: var(--panel-raised);
+  color: #cfcfcf;
+  border: 1px solid var(--border-strong);
+}
+
+.badge-enrollment[data-phase="enrolled"] {
+  background: var(--status-enrolled-bg);
+  color: var(--status-enrolled);
+}
+
+.badge-enrollment[data-phase="waitlist"] {
+  background: var(--status-waitlist-bg);
+  color: var(--status-waitlist);
+}
+
+.badge-hot {
+  background: #3d1b1b;
+  color: #fca5a5;
+  border: 1px solid #7f1d1d;
+}
+
+/* 名額進度條 */
+.meter {
+  height: 6px;
+  background: var(--track);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meter--lg {
+  height: 8px;
+}
+
+.meter__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--status-open);
+  transition: width 0.4s ease;
+}
+
+.meter__fill[data-full="true"] {
+  background: var(--status-full);
+}
+
+.meter__label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+/* ---------------------------------------------------------------
+   課程卡片
+   --------------------------------------------------------------- */
+
+.course-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.course-card__link {
+  display: block;
+  min-width: 0;
+}
+
+.course-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.course-card__title {
+  font-weight: 900;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.course-card__meta {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.course-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 篩選 chip */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  background: var(--panel);
+  color: var(--muted);
+  border: 1.5px solid var(--border);
+}
+
+.chip[data-active="true"] {
+  background: var(--brand);
+  color: #121212;
+  border-color: var(--brand);
+}
+
+/* ---------------------------------------------------------------
+   頁首列 / 清單 / 空狀態 / 骨架
+   --------------------------------------------------------------- */
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.page-head__subtitle {
+  color: var(--muted);
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.search-input {
+  max-width: 280px;
+}
+
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.list-row:last-child {
+  border-bottom: none;
+}
+
+.empty-state {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+  border-style: dashed;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.error-state {
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--status-full);
+  border: 1px solid #7f1d1d;
+  background: #241616;
+  border-radius: 18px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.8; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #202020, #2a2a2a, #202020);
+  border-radius: 8px;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------------------------------------------------------------
+   Modal
+   --------------------------------------------------------------- */
+
+.modal-card {
+  padding: 30px 26px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+}
+
+.modal-card__icon {
+  font-size: 42px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.modal-card__title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+
+.modal-card__body {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.75;
+  margin: 0 0 20px;
+}
+
+.modal-card__button {
+  width: 100%;
+  padding: 12px;
+  font-weight: 900;
+}
+
+/* ---------------------------------------------------------------
+   課表
+   --------------------------------------------------------------- */
+
+.timetable-scroll {
+  overflow-x: auto;
+  margin-bottom: 24px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.timetable {
+  display: grid;
+  grid-template-columns: 90px repeat(5, minmax(110px, 1fr));
+  min-width: 640px;
+}
+
+.timetable__head {
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+
+.timetable__head--period {
+  text-align: left;
+  font-size: 12px;
+  color: var(--muted);
+  border-left: 0;
+}
+
+.timetable__period {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.timetable__period-label {
+  font-weight: 900;
+  color: var(--text);
+}
+
+.timetable__cell {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timetable__entry {
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.timetable__entry[data-phase="enrolled"] {
+  background: var(--status-enrolled-bg);
+  color: var(--status-enrolled);
+}
+
+.timetable__entry[data-phase="waitlist"] {
+  background: var(--status-waitlist-bg);
+  color: var(--status-waitlist);
+}
+
+.timetable__entry-status {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.timetable__conflict {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--status-full);
+}
+
+/* ---------------------------------------------------------------
+   表單 / 詳細頁
+   --------------------------------------------------------------- */
+
+.form-card {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field__label {
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.detail-card {
+  padding: 32px;
+}
+
+.detail-card__title {
+  font-size: 28px;
+  font-weight: 900;
+  margin-top: 10px;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+.detail-section {
+  margin-top: 24px;
+}
+
+.detail-section__title {
+  font-weight: 900;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.detail-section__body {
+  color: #cfcfcf;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.detail-syllabus {
+  display: grid;
+  gap: 6px;
+}
+
+.detail-syllabus__item {
+  display: flex;
+  gap: 8px;
+  color: #cfcfcf;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.detail-syllabus__marker {
+  color: var(--subtitle);
+}
+
+.detail-meter {
+  margin-top: 26px;
+  background: #171717;
+  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  padding: 20px;
+}
+
+.stat-card__label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.stat-card__value {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  margin-top: 6px;
+}
+
+/* ---------------------------------------------------------------
+   登入 / 註冊 表單的補充樣式
+   --------------------------------------------------------------- */
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.auth-message {
+  font-size: 12.5px;
+  line-height: 1.7;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.auth-message--error {
+  background: #2b1616;
+  color: #fca5a5;
+  border: 1px solid #7f1d1d;
+}
+
+.auth-message--notice {
+  background: #16241f;
+  color: var(--status-enrolled);
+  border: 1px solid #245244;
+}
+
+.auth-switch {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.auth-switch a {
+  color: var(--subtitle);
+  font-weight: 800;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------
+   應用頁 RWD（原本只有登入頁有斷點）
+   --------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  :root {
+    --app-gutter: 18px;
+  }
+
+  .app-header__inner {
+    gap: 10px;
+  }
+
+  .app-header__nav {
+    order: 3;
+    width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 6px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .app-header__nav .tab {
+    white-space: nowrap;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-card {
+    padding: 22px;
+  }
+
+  .detail-card__title {
+    font-size: 23px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --app-gutter: 14px;
+  }
+
+  .app-main {
+    padding-block: 20px 64px;
+  }
+
+  .grid-auto {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .section-title {
+    font-size: 20px;
+  }
+
+  .page-head {
+    align-items: stretch;
+  }
+
+  .search-input {
+    max-width: none;
+  }
+
+  .app-header__brand-name {
+    font-size: 16px;
+  }
+
+  .app-header__user-name {
+    max-width: 8ch;
+  }
+
+  .course-card,
+  .form-card,
+  .stat-card {
+    padding: 16px;
+  }
+
+  .course-card__footer {
+    gap: 8px;
+  }
+
+  .btn-status {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .list-row {
+    padding: 12px 14px;
+  }
+
+  .toast {
+    right: 14px;
+    left: 14px;
+    bottom: 14px;
+  }
 }
 
 .login-page {

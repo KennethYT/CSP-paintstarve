@@ -1,51 +1,101 @@
-"use client";
+import Link from "next/link";
+import { getSessionUser } from "@/lib/session";
+import { CourseError, getCourse, getRoster } from "@/lib/course-service";
 
-import { notFound, useParams, useRouter } from "next/navigation";
-import { useClassroom } from "@/components/classroom-store";
-import { resolveRouteCourseId } from "@/lib/course-utils";
+/**
+ * Server component：名單直接在伺服器端取，不經過瀏覽器 API 呼叫。
+ * getRoster 會驗證這門課確實屬於這位教師。
+ */
+export default async function TeacherRosterPage({
+  params
+}: Readonly<{ params: Promise<{ courseId: string }> }>) {
+  const { courseId } = await params;
+  const user = await getSessionUser();
 
-export default function TeacherRosterPage() {
-  const classroom = useClassroom();
-  const router = useRouter();
-  const params = useParams<{ courseId: string }>();
-  const routeCourseId = resolveRouteCourseId(params.courseId);
-  const course = classroom.courses.find((item) => item.id === routeCourseId && item.teacher === classroom.userName);
+  if (!user) {
+    return null;
+  }
 
-  if (!course) {
-    notFound();
+  let content: { title: string; enrolled: number; capacity: number; waitlistCount: number } | null = null;
+  let roster: Awaited<ReturnType<typeof getRoster>> | null = null;
+  let error = "";
+
+  try {
+    const [detail, rosterResult] = await Promise.all([
+      getCourse(courseId, user.id),
+      getRoster(courseId, user.id)
+    ]);
+
+    content = {
+      title: detail.course.title,
+      enrolled: detail.course.enrolled,
+      capacity: detail.course.capacity,
+      waitlistCount: detail.course.waitlistCount
+    };
+    roster = rosterResult;
+  } catch (caught) {
+    error = caught instanceof CourseError ? caught.message : "讀取選課名單失敗。";
   }
 
   return (
     <section>
-      <button className="btn" onClick={() => router.push("/teacher/courses")} style={{ background: "transparent", color: "#6B7280", fontWeight: 800, marginBottom: 16 }}>
+      <Link href="/teacher/courses" className="btn btn-link" style={{ marginBottom: 16 }}>
         ← 回到我的課程
-      </button>
-      <div className="section-title">{course.title}</div>
-      <div className="muted" style={{ marginTop: 4, marginBottom: 20, fontSize: 14 }}>已選 {course.enrolled} / {course.capacity} · 候補 {course.waitlist.length} 人</div>
+      </Link>
 
-      <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>已確認學生</div>
-      <div className="card" style={{ overflow: "hidden", marginBottom: 22 }}>
-        {course.enrolledStudents.map((student, index) => (
-          <div key={student.id} style={{ display: "flex", justifyContent: "space-between", padding: "13px 18px", borderBottom: index === course.enrolledStudents.length - 1 ? "none" : "1px solid #F3F4F6", fontSize: 14 }}>
-            <span style={{ fontWeight: 700 }}>{student.name}</span>
-            <span className="muted">{student.id}</span>
-          </div>
-        ))}
-      </div>
-
-      {course.waitlist.length > 0 ? (
-        <div>
-          <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>候補名單</div>
-          <div className="card" style={{ overflow: "hidden" }}>
-            {course.waitlist.map((student, index) => (
-              <div key={`${student.name}-${student.position}`} style={{ display: "flex", justifyContent: "space-between", padding: "13px 18px", borderBottom: index === course.waitlist.length - 1 ? "none" : "1px solid #F3F4F6", fontSize: 14 }}>
-                <span style={{ fontWeight: 700 }}>{student.name}</span>
-                <span style={{ color: "var(--warning)", fontWeight: 900 }}>候補第 {student.position} 位</span>
-              </div>
-            ))}
-          </div>
+      {error || !content || !roster ? (
+        <div className="error-state" role="alert">
+          <span>{error || "讀取選課名單失敗。"}</span>
+          <Link className="btn btn-brand" href="/teacher/courses" style={{ padding: "10px 20px", fontWeight: 900 }}>
+            回到我的課程
+          </Link>
         </div>
-      ) : null}
+      ) : (
+        <>
+          <h1 className="section-title">{content.title}</h1>
+          <div className="page-head__subtitle" style={{ marginBottom: 20 }}>
+            已選 {content.enrolled} / {content.capacity} · 候補 {content.waitlistCount} 人
+          </div>
+
+          <h2 style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>
+            已確認學生（{roster.enrolledStudents.length}）
+          </h2>
+          <div className="card" style={{ overflow: "hidden", marginBottom: 22 }}>
+            {roster.enrolledStudents.length === 0 ? (
+              <div className="empty-state" style={{ padding: 28 }}>
+                目前還沒有學生選這門課。
+              </div>
+            ) : (
+              roster.enrolledStudents.map((student) => (
+                <div key={student.id} className="list-row">
+                  <span style={{ fontWeight: 700 }}>{student.name}</span>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    {student.id.slice(0, 8)}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+
+          {roster.waitlist.length > 0 ? (
+            <div>
+              <h2 style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>
+                候補名單（{roster.waitlist.length}）
+              </h2>
+              <div className="card" style={{ overflow: "hidden" }}>
+                {roster.waitlist.map((student) => (
+                  <div key={student.id} className="list-row">
+                    <span style={{ fontWeight: 700 }}>{student.name}</span>
+                    <span style={{ color: "var(--status-waitlist)", fontWeight: 900, fontSize: 13 }}>
+                      候補第 {student.position} 位
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </>
+      )}
     </section>
   );
 }

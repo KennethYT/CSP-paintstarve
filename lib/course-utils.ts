@@ -1,7 +1,12 @@
-import { periods } from "@/lib/demo-data";
+import { dayLabels, periods } from "@/lib/course-constants";
 import type { Course, EnrollmentState } from "@/lib/types";
 
-const dayLabels = ["一", "二", "三", "四", "五"];
+export type StatusPhase = "upcoming" | "open" | "full" | "my-enrolled" | "my-waitlist";
+
+export type CourseStatus = {
+  phase: StatusPhase;
+  label: string;
+};
 
 export function formatCountdown(ms: number) {
   if (ms <= 0) return "已開放";
@@ -25,44 +30,45 @@ export function formatCountdown(ms: number) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")} 後開搶`;
 }
 
-export function getStatus(course: Course, now: number, enrollment?: EnrollmentState) {
+/**
+ * 課程對這位使用者的狀態。顏色不在這裡決定 —— 由 CSS 依 data-phase 上色
+ * （見 app/globals.css 的 .status-text / .btn-status），避免把樣式寫死在邏輯裡。
+ */
+export function getStatus(course: Course, now: number, enrollment?: EnrollmentState): CourseStatus {
   if (enrollment) {
     if (enrollment.status === "enrolled") {
-      return { phase: "my-enrolled", label: "✓ 已搶到", color: "#15803D" };
+      return { phase: "my-enrolled", label: "✓ 已搶到" };
     }
 
-    return { phase: "my-waitlist", label: `候補中 第${enrollment.position}位`, color: "#B45309" };
+    return { phase: "my-waitlist", label: `候補中 第${enrollment.position}位` };
   }
 
   if (now < course.openAt) {
-    return { phase: "upcoming", label: formatCountdown(course.openAt - now), color: "#6B7280" };
+    return { phase: "upcoming", label: formatCountdown(course.openAt - now) };
   }
 
   if (course.enrolled < course.capacity) {
-    return { phase: "open", label: "搶課中", color: "#1D4ED8" };
+    return { phase: "open", label: "搶課中" };
   }
 
-  return { phase: "full", label: "已額滿", color: "#B91C1C" };
+  return { phase: "full", label: "已額滿" };
 }
 
-export function getButtonStyle(phase: string) {
-  const base = "padding: 9px 16px;border-radius: 10px;font-weight: 800;font-size: 13px;white-space: nowrap;";
-
-  if (phase === "upcoming") return `${base}background:#F3F4F6;color:#9CA3AF;cursor:not-allowed;`;
-  if (phase === "open") return `${base}background:#1D4ED8;color:#fff;cursor:pointer;`;
-  if (phase === "full") return `${base}background:#FEF3C7;color:#B45309;cursor:pointer;`;
-  if (phase === "my-enrolled") return `${base}background:#2b1c1c;color:#FCA5A5;cursor:pointer;border:1px solid #7F1D1D;`;
-  if (phase === "my-waitlist") return `${base}background:#29211a;color:#FDBA74;cursor:pointer;border:1px solid #9A3412;`;
-  return `${base}background:#1f1f1f;color:#d4d4d4;cursor:default;`;
-}
-
-export function getButtonLabel(phase: string) {
+export function getButtonLabel(phase: StatusPhase) {
   if (phase === "upcoming") return "尚未開放";
   if (phase === "open") return "搶課";
   if (phase === "full") return "加入候補";
   if (phase === "my-enrolled") return "取消選課";
-  if (phase === "my-waitlist") return "取消候補";
-  return "候補中";
+  return "取消候補";
+}
+
+/** 尚未開放的課程按鈕不能按，其餘都有對應動作。 */
+export function isActionable(phase: StatusPhase) {
+  return phase !== "upcoming";
+}
+
+export function isCancelAction(phase: StatusPhase) {
+  return phase === "my-enrolled" || phase === "my-waitlist";
 }
 
 export function dayLabel(day: number) {
@@ -74,49 +80,41 @@ export function buildPeriodLabel(index: number) {
 }
 
 export function getFillPct(enrolled: number, capacity: number) {
-  return Math.round((enrolled / Math.max(capacity, 1)) * 100);
+  return Math.min(100, Math.round((enrolled / Math.max(capacity, 1)) * 100));
 }
 
-export function getBarColor(enrolled: number, capacity: number) {
-  return enrolled >= capacity ? "#B91C1C" : "#1D4ED8";
-}
+export type ScheduleCell = {
+  courseId: string;
+  title: string;
+  statusLabel: string;
+  phase: "enrolled" | "waitlist";
+};
 
-export function buildTeacherSeedCourseId(name: string) {
-  // Use the raw name directly in the ID. URL encoding is handled at the Link/href
-  // level so we avoid double-encoding when the ID passes through encodeURIComponent.
-  return `seed-${name.trim()}`;
-}
-
-export function resolveRouteCourseId(rawCourseId: string) {
-  // Next.js useParams already decodes the dynamic segment, so return as-is.
-  // We keep a try/catch for safety in case of malformed percent sequences.
-  try {
-    return decodeURIComponent(rawCourseId);
-  } catch {
-    return rawCourseId;
-  }
-}
-
+/**
+ * 組出課表格線。同一個時段若有多門已選課程，代表撞堂 —— 這裡會全部帶出來，
+ * 由畫面標示衝突，而不是默默只顯示第一門。
+ */
 export function getDayCells(courses: Course[], enrollments: Record<string, EnrollmentState>) {
   return periods.map((period, periodIndex) => ({
     label: period.label,
     time: period.time,
-    cells: [1, 2, 3, 4, 5].map((day) => {
-      const course = courses.find(
-        (candidate) => candidate.day === day && candidate.periodIndex === periodIndex && enrollments[candidate.id]
-      );
+    cells: [1, 2, 3, 4, 5].map<ScheduleCell[]>((day) =>
+      courses
+        .filter(
+          (candidate) =>
+            candidate.day === day && candidate.periodIndex === periodIndex && enrollments[candidate.id]
+        )
+        .map((course) => {
+          const enrollment = enrollments[course.id];
+          const enrolled = enrollment.status === "enrolled";
 
-      if (!course) return { hasCourse: false };
-
-      const enrollment = enrollments[course.id];
-      const enrolled = enrollment.status === "enrolled";
-
-      return {
-        hasCourse: true,
-        title: course.title,
-        statusLabel: enrolled ? "已確認" : "候補中",
-        style: `background:${enrolled ? "#EFF6FF" : "#FFFBEB"};color:${enrolled ? "#1D4ED8" : "#B45309"};border-radius:10px;padding:8px;height:100%;`
-      };
-    })
+          return {
+            courseId: course.id,
+            title: course.title,
+            statusLabel: enrolled ? "已確認" : `候補第 ${enrollment.position} 位`,
+            phase: enrolled ? "enrolled" : "waitlist"
+          };
+        })
+    )
   }));
 }
