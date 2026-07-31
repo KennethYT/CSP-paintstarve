@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuth, isBetterAuthConfigured } from "@/lib/auth";
 import { resolveDiscordRoleForUser } from "@/lib/discord";
 
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  if (!isBetterAuthConfigured) {
+    return NextResponse.json({ ok: false, message: "登入系統尚未完成設定。" }, { status: 503 });
+  }
+
+  const session = await getAuth().api.getSession({ headers: request.headers });
 
   if (!session?.user?.id) {
     return NextResponse.json({ ok: false, message: "尚未登入，請先完成 Discord OAuth。" }, { status: 401 });

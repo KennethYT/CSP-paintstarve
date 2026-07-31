@@ -48,7 +48,9 @@ pnpm dev
 |---|---|
 | `pnpm dev` | 開發伺服器 |
 | `pnpm build` / `pnpm start` | 正式版建置／啟動 |
+| `pnpm preview` / `pnpm deploy` | Cloudflare Workers 預覽／部署 |
 | `pnpm lint` | ESLint |
+| `pnpm cf-typegen` | 產生 Wrangler 綁定型別 |
 | `pnpm db:push` | 把 schema 同步到資料庫 |
 | `pnpm db:seed` | 重建示範課程資料（會清空既有課程與選課） |
 | `pnpm db:studio` | Prisma Studio |
@@ -80,7 +82,8 @@ lib/
 components/
   classroom-store.tsx           前端狀態：首屏由伺服器帶入，之後輪詢更新
   role-shell.tsx                server component，角色把關 + 首屏資料
-proxy.ts                        edge 層的 cookie 檢查（非授權依據）
+open-next.config.ts            OpenNext / Cloudflare adapter 設定
+wrangler.jsonc                 Cloudflare Workers 部署設定
 ```
 
 ### 搶課的併發正確性
@@ -108,10 +111,9 @@ await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${courseId}, 
 
 三層，由外到內：
 
-1. `proxy.ts` — edge 層只看 session cookie 在不在，是效能優化，**不是授權依據**
-2. `app/student/layout.tsx`、`app/teacher/layout.tsx` — server component 用
+1. `app/student/layout.tsx`、`app/teacher/layout.tsx` — server component 用
    `requireRole()` 做權威把關，關掉 JS 也繞不過
-3. 每個 API route 各自驗證 session 與角色
+2. 每個 API route 各自驗證 session 與角色
 
 使用者的 `role` 在 better-auth 設為 `input: false`，全專案只有 Discord 身份組解析
 （`lib/discord.ts`）會寫入它，使用者無法透過 update-user 端點自行把自己改成教師。

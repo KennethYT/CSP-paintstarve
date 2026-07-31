@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { getAuth, shouldSkipAuthDuringBuild } from "@/lib/auth";
 import type { Role, SessionUser } from "@/lib/types";
 
 function toRole(value: unknown): Role | null {
@@ -9,10 +9,14 @@ function toRole(value: unknown): Role | null {
 
 /**
  * 讀取目前的 session。這是伺服器端的權威來源 —
- * middleware 只是便宜的 cookie 檢查，不能拿來當作授權依據。
+ * 不能把 client 端導頁或 proxy 檢查當作授權依據。
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const session = await auth.api.getSession({ headers: await headers() });
+  if (shouldSkipAuthDuringBuild) {
+    return null;
+  }
+
+  const session = await getAuth().api.getSession({ headers: await headers() });
 
   if (!session?.user?.id) {
     return null;
@@ -29,7 +33,11 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
 /** 在 route handler 內使用，headers 直接由 request 帶入。 */
 export async function getSessionUserFromRequest(request: Request): Promise<SessionUser | null> {
-  const session = await auth.api.getSession({ headers: request.headers });
+  if (shouldSkipAuthDuringBuild) {
+    return null;
+  }
+
+  const session = await getAuth().api.getSession({ headers: request.headers });
 
   if (!session?.user?.id) {
     return null;
