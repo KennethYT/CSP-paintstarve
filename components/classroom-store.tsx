@@ -1,324 +1,307 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { seedCourses } from "@/lib/demo-data";
-import { buildTeacherSeedCourseId, getStatus } from "@/lib/course-utils";
-import type { Course, EnrollmentState, ModalState, Role, ToastState } from "@/lib/types";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { ModalIconGraphic } from "@/components/icons";
+import type {
+  Course,
+  CreateCoursePayload,
+  EnrollmentState,
+  ModalState,
+  SessionUser,
+  ToastState
+} from "@/lib/types";
 
-type ClassroomState = {
+const POLL_INTERVAL_MS = 4000;
+const CLOCK_INTERVAL_MS = 1000;
+
+type LoadState = "loading" | "ready" | "error";
+
+type ClassroomContextValue = {
   now: number;
-  role: Role | null;
-  userName: string;
+  user: SessionUser;
   courses: Course[];
   studentEnrollments: Record<string, EnrollmentState>;
+  loadState: LoadState;
+  loadError: string;
+  pendingCourseId: string | null;
   confirmModal: ModalState;
   toast: ToastState;
-};
-
-type ClassroomContextValue = ClassroomState & {
-  login: (role: Role, name: string) => void;
-  logout: () => void;
-  grabCourse: (courseId: string) => void;
-  cancelEnrollment: (courseId: string) => void;
-  createTeacherCourse: (course: Omit<Course, "id" | "enrolled" | "enrolledStudents" | "waitlist">) => void;
+  refresh: () => Promise<void>;
+  grabCourse: (courseId: string) => Promise<void>;
+  cancelEnrollment: (courseId: string) => Promise<void>;
+  createTeacherCourse: (payload: CreateCoursePayload) => Promise<boolean>;
   dismissConfirmModal: () => void;
 };
 
 const ClassroomContext = createContext<ClassroomContextValue | null>(null);
 
-const namesPool = [
-  "陳品妤",
-  "林彥廷",
-  "張宜蓁",
-  "黃冠傑",
-  "吳佳穎",
-  "蔡宗翰",
-  "李欣妍",
-  "許家瑋",
-  "謝雨柔",
-  "鄭博文"
-];
+type SnapshotResponse = {
+  ok: boolean;
+  courses?: Course[];
+  enrollments?: Record<string, EnrollmentState>;
+  message?: string;
+};
 
-function createInitialState(): ClassroomState {
-  const now = Date.now();
+type ActionResponse = {
+  ok: boolean;
+  message?: string;
+  result?:
+    | { status: "enrolled" }
+    | { status: "waitlist"; position: number }
+    | { cancelled: "enrolled" | "waitlist"; promotedUserId: string | null };
+};
 
-  return {
-    now,
-    role: null,
-    userName: "",
-    courses: seedCourses(now),
-    studentEnrollments: {},
-    confirmModal: null,
-    toast: null
-  };
-}
+export function ClassroomProvider({
+  user,
+  initialCourses,
+  initialEnrollments,
+  children
+}: Readonly<{
+  user: SessionUser;
+  initialCourses: Course[];
+  initialEnrollments: Record<string, EnrollmentState>;
+  children: ReactNode;
+}>) {
+  const [now, setNow] = useState(() => Date.now());
+  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [studentEnrollments, setStudentEnrollments] =
+    useState<Record<string, EnrollmentState>>(initialEnrollments);
+  const [loadState, setLoadState] = useState<LoadState>("ready");
+  const [loadError, setLoadError] = useState("");
+  const [pendingCourseId, setPendingCourseId] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<ModalState>(null);
+  const [toast, setToast] = useState<ToastState>(null);
 
-export function ClassroomProvider({ children }: Readonly<{ children: React.ReactNode }>) {
-  const [state, setState] = useState<ClassroomState>(createInitialState);
+  const toastTimer = useRef<number | null>(null);
+
+  const showToast = useCallback((message: string) => {
+    setToast({ message });
+
+    if (toastTimer.current !== null) {
+      window.clearTimeout(toastTimer.current);
+    }
+
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    try {
+      const response = await fetch("/api/courses", { cache: "no-store" });
+      const payload = (await response.json()) as SnapshotResponse;
+
+      if (!response.ok || !payload.ok || !payload.courses) {
+        setLoadState("error");
+        setLoadError(payload.message ?? "讀取課程資料失敗。");
+        return;
+      }
+
+      setCourses(payload.courses);
+      setStudentEnrollments(payload.enrollments ?? {});
+      setLoadState("ready");
+      setLoadError("");
+    } catch {
+      setLoadState("error");
+      setLoadError("無法連線到伺服器，請檢查網路後重試。");
+    }
+  }, []);
+
+  // 倒數計時用的時鐘
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), CLOCK_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  // 定期重抓，讓別人搶走的名額即時反映出來。
+  // 首屏資料已由 RoleShell 在伺服器端帶進來，這裡不需要再抓一次。
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void refresh();
+      }
+    }, POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
+  }, [refresh]);
 
   useEffect(() => {
-    const tick = window.setInterval(() => {
-      setState((current) => ({ ...current, now: Date.now() }));
-    }, 1000);
-
-    const drain = window.setInterval(() => {
-      setState((current) => {
-        let nextCourses = current.courses;
-
-        for (const course of current.courses) {
-          const status = getStatus(course, current.now, current.studentEnrollments[course.id]);
-
-          if (course.hot && status.phase === "open" && Math.random() < 0.35 && course.enrolled < course.capacity) {
-            const studentIndex = course.enrolled % namesPool.length;
-            nextCourses = nextCourses.map((candidate) =>
-              candidate.id === course.id
-                ? {
-                    ...candidate,
-                    enrolled: candidate.enrolled + 1,
-                    enrolledStudents: candidate.enrolledStudents.concat([
-                      {
-                        name: namesPool[studentIndex],
-                        id: `SX${1000 + candidate.enrolled}`
-                      }
-                    ])
-                  }
-                : candidate
-            );
-          }
-        }
-
-        return { ...current, courses: nextCourses };
-      });
-    }, 2500);
-
     return () => {
-      window.clearInterval(tick);
-      window.clearInterval(drain);
+      if (toastTimer.current !== null) {
+        window.clearTimeout(toastTimer.current);
+      }
     };
   }, []);
 
-  const value = useMemo<ClassroomContextValue>(() => {
-    const showToast = (message: string) => {
-      setState((current) => ({ ...current, toast: { message } }));
-      window.setTimeout(() => {
-        setState((current) => ({ ...current, toast: null }));
-      }, 2600);
-    };
+  const grabCourse = useCallback(
+    async (courseId: string) => {
+      const course = courses.find((candidate) => candidate.id === courseId);
+      setPendingCourseId(courseId);
 
-    const login = (role: Role, name: string) => {
-      setState((current) => {
-        let nextCourses = current.courses;
+      try {
+        const response = await fetch(`/api/courses/${encodeURIComponent(courseId)}/enroll`, {
+          method: "POST"
+        });
+        const payload = (await response.json()) as ActionResponse;
 
-        if (role === "teacher" && !current.courses.some((course) => course.teacher === name)) {
-          const now = Date.now();
-
-          nextCourses = current.courses.concat([
-            {
-              id: buildTeacherSeedCourseId(name),
-              title: "示範課程：專題研究方法",
-              teacher: name,
-              category: "資訊",
-              day: 3,
-              periodIndex: 0,
-              location: "研究大樓 401",
-              description: "帶領學生完成一份完整的專題研究提案，涵蓋文獻回顧與研究設計。",
-              syllabus: ["第1週：主題選定", "第2週：文獻回顧", "第3週：研究方法設計", "第4週：提案報告"],
-              capacity: 20,
-              enrolled: 18,
-              openAt: now - 999999,
-              hot: false,
-              enrolledStudents: namesPool.map((student, index) => ({ name: student, id: `D10${100 + index}` })),
-              waitlist: [
-                { name: "洪韋辰", position: 1 },
-                { name: "邱思瑀", position: 2 }
-              ]
-            }
-          ]);
+        if (!response.ok || !payload.ok) {
+          showToast(payload.message ?? "搶課失敗，請稍後再試。");
+          await refresh();
+          return;
         }
 
-        return {
-          ...current,
-          role,
-          userName: name,
-          courses: nextCourses
-        };
-      });
-    };
+        const result = payload.result;
 
-    const logout = () => {
-      setState((current) => ({
-        ...current,
-        role: null,
-        userName: ""
-      }));
-    };
-
-    const grabCourse = (courseId: string) => {
-      setState((current) => {
-        if (!current.role || current.studentEnrollments[courseId]) {
-          return current;
-        }
-
-        const course = current.courses.find((candidate) => candidate.id === courseId);
-
-        if (!course || current.now < course.openAt) {
-          return current;
-        }
-
-        if (course.enrolled < course.capacity) {
-          const studentId = `S99${Math.floor(Math.random() * 900 + 100)}`;
-
-          return {
-            ...current,
-            courses: current.courses.map((candidate) =>
-              candidate.id === courseId
-                ? {
-                    ...candidate,
-                    enrolled: candidate.enrolled + 1,
-                    enrolledStudents: candidate.enrolledStudents.concat([{ name: current.userName, id: studentId }])
-                  }
-                : candidate
-            ),
-            studentEnrollments: { ...current.studentEnrollments, [courseId]: { status: "enrolled" } },
-            confirmModal: {
-              icon: "🎉",
-              title: "搶課成功",
-              body: `已為你保留「${course.title}」的座位，可至「我的課表」查看。`
-            }
-          };
-        }
-
-        const position = course.waitlist.length + 1;
-
-        return {
-          ...current,
-          courses: current.courses.map((candidate) =>
-            candidate.id === courseId
-              ? {
-                  ...candidate,
-                  waitlist: candidate.waitlist.concat([{ name: current.userName, position }])
-                }
-              : candidate
-          ),
-          studentEnrollments: { ...current.studentEnrollments, [courseId]: { status: "waitlist", position } },
-          confirmModal: {
-            icon: "⏳",
+        if (result && "status" in result && result.status === "waitlist") {
+          setConfirmModal({
+            icon: "waitlist",
             title: "已加入候補",
-            body: `「${course.title}」目前候補排序第 ${position} 位，額滿後將依序遞補。`
-          }
-        };
-      });
-    };
-
-    const cancelEnrollment = (courseId: string) => {
-      setState((current) => {
-        const enrollment = current.studentEnrollments[courseId];
-
-        if (!enrollment) {
-          return current;
-        }
-
-        const course = current.courses.find((candidate) => candidate.id === courseId);
-
-        if (!course) {
-          return current;
-        }
-
-        const nextEnrollments = { ...current.studentEnrollments };
-        delete nextEnrollments[courseId];
-
-        let nextCourses = current.courses;
-
-        if (enrollment.status === "enrolled") {
-          const nextEnrolled = Math.max(course.enrolled - 1, 0);
-          const removeIndex = course.enrolledStudents.findIndex((student) => student.name === current.userName);
-
-          nextCourses = current.courses.map((candidate) => {
-            if (candidate.id !== courseId) {
-              return candidate;
-            }
-
-            const nextStudents = removeIndex >= 0
-              ? candidate.enrolledStudents.filter((_, index) => index !== removeIndex)
-              : candidate.enrolledStudents;
-
-            return {
-              ...candidate,
-              enrolled: nextEnrolled,
-              enrolledStudents: nextStudents
-            };
+            body: `「${course?.title ?? "課程"}」目前候補排序第 ${result.position} 位，有人退選時將依序遞補。`
           });
-
-          return {
-            ...current,
-            courses: nextCourses,
-            studentEnrollments: nextEnrollments,
-            confirmModal: {
-              icon: "🗑️",
-              title: "已取消選課",
-              body: `已取消「${course.title}」選課，你可以重新搶課或改選其他課程。`
-            }
-          };
+        } else {
+          setConfirmModal({
+            icon: "success",
+            title: "搶課成功",
+            body: `已為你保留「${course?.title ?? "課程"}」的座位，可至「我的課表」查看。`
+          });
         }
 
-        const nextWaitlist = course.waitlist
-          .filter((student) => student.name !== current.userName)
-          .map((student, index) => ({ ...student, position: index + 1 }));
+        await refresh();
+      } catch {
+        showToast("搶課失敗，請檢查網路後再試。");
+      } finally {
+        setPendingCourseId(null);
+      }
+    },
+    [courses, refresh, showToast]
+  );
 
-        nextCourses = current.courses.map((candidate) =>
-          candidate.id === courseId
-            ? {
-                ...candidate,
-                waitlist: nextWaitlist
-              }
-            : candidate
-        );
+  const cancelEnrollment = useCallback(
+    async (courseId: string) => {
+      const course = courses.find((candidate) => candidate.id === courseId);
+      setPendingCourseId(courseId);
 
-        return {
-          ...current,
-          courses: nextCourses,
-          studentEnrollments: nextEnrollments,
-          confirmModal: {
-            icon: "🗑️",
-            title: "已取消候補",
-            body: `已取消「${course.title}」候補資格。`
-          }
-        };
-      });
-    };
+      try {
+        const response = await fetch(`/api/courses/${encodeURIComponent(courseId)}/enroll`, {
+          method: "DELETE"
+        });
+        const payload = (await response.json()) as ActionResponse;
 
-    const createTeacherCourse = (course: Omit<Course, "id" | "enrolled" | "enrolledStudents" | "waitlist">) => {
-      setState((current) => ({
-        ...current,
-        courses: current.courses.concat([
-          {
-            ...course,
-            id: `c${Date.now()}`,
-            enrolled: 0,
-            enrolledStudents: [],
-            waitlist: []
-          }
-        ])
-      }));
-      showToast("課程建立成功");
-    };
+        if (!response.ok || !payload.ok) {
+          showToast(payload.message ?? "取消失敗，請稍後再試。");
+          await refresh();
+          return;
+        }
 
-    const dismissConfirmModal = () => {
-      setState((current) => ({ ...current, confirmModal: null }));
-    };
+        const result = payload.result;
+        const wasWaitlist = result && "cancelled" in result && result.cancelled === "waitlist";
 
-    return {
-      ...state,
-      login,
-      logout,
+        setConfirmModal({
+          icon: "removed",
+          title: wasWaitlist ? "已取消候補" : "已取消選課",
+          body: wasWaitlist
+            ? `已取消「${course?.title ?? "課程"}」的候補資格。`
+            : `已取消「${course?.title ?? "課程"}」選課，你可以重新搶課或改選其他課程。`
+        });
+
+        await refresh();
+      } catch {
+        showToast("取消失敗，請檢查網路後再試。");
+      } finally {
+        setPendingCourseId(null);
+      }
+    },
+    [courses, refresh, showToast]
+  );
+
+  const createTeacherCourse = useCallback(
+    async (payload: CreateCoursePayload) => {
+      try {
+        const response = await fetch("/api/courses", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const result = (await response.json()) as { ok: boolean; message?: string };
+
+        if (!response.ok || !result.ok) {
+          showToast(result.message ?? "建立課程失敗。");
+          return false;
+        }
+
+        await refresh();
+        showToast("課程建立成功");
+        return true;
+      } catch {
+        showToast("建立課程失敗，請檢查網路後再試。");
+        return false;
+      }
+    },
+    [refresh, showToast]
+  );
+
+  const dismissConfirmModal = useCallback(() => setConfirmModal(null), []);
+
+  const value = useMemo<ClassroomContextValue>(
+    () => ({
+      now,
+      user,
+      courses,
+      studentEnrollments,
+      loadState,
+      loadError,
+      pendingCourseId,
+      confirmModal,
+      toast,
+      refresh,
       grabCourse,
       cancelEnrollment,
       createTeacherCourse,
       dismissConfirmModal
-    };
-  }, [state]);
+    }),
+    [
+      now,
+      user,
+      courses,
+      studentEnrollments,
+      loadState,
+      loadError,
+      pendingCourseId,
+      confirmModal,
+      toast,
+      refresh,
+      grabCourse,
+      cancelEnrollment,
+      createTeacherCourse,
+      dismissConfirmModal
+    ]
+  );
 
-  return <ClassroomContext.Provider value={value}>{children}</ClassroomContext.Provider>;
+  return (
+    <ClassroomContext.Provider value={value}>
+      {children}
+      {confirmModal ? <ConfirmModal modal={confirmModal} onDismiss={dismissConfirmModal} /> : null}
+      {toast ? <div className="toast">{toast.message}</div> : null}
+    </ClassroomContext.Provider>
+  );
+}
+
+function ConfirmModal({ modal, onDismiss }: Readonly<{ modal: NonNullable<ModalState>; onDismiss: () => void }>) {
+  return (
+    <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="classroom-modal-title">
+      <div className="card modal-card fade-up">
+        <div className="modal-card__icon" data-icon={modal.icon}>
+          <ModalIconGraphic icon={modal.icon} />
+        </div>
+        <div className="modal-card__title" id="classroom-modal-title">
+          {modal.title}
+        </div>
+        <p className="modal-card__body">{modal.body}</p>
+        <button className="btn btn-brand modal-card__button" onClick={onDismiss} autoFocus>
+          知道了
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function useClassroom() {

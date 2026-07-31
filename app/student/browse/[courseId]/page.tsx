@@ -1,110 +1,157 @@
 "use client";
 
-import { useMemo } from "react";
-import { notFound, useParams, useRouter } from "next/navigation";
-import { buildPeriodLabel, dayLabel, getButtonLabel, getButtonStyle, getFillPct, getStatus, resolveRouteCourseId } from "@/lib/course-utils";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import {
+  buildPeriodLabel,
+  dayLabel,
+  getButtonLabel,
+  getFillPct,
+  getStatus,
+  isActionable,
+  isCancelAction
+} from "@/lib/course-utils";
 import { useClassroom } from "@/components/classroom-store";
+import { CourseDataBoundary } from "@/components/course-states";
+import { BackIcon, BulletIcon, CheckIcon, LocationIcon } from "@/components/icons";
 
 export default function StudentCourseDetailPage() {
   const classroom = useClassroom();
-  const router = useRouter();
   const params = useParams<{ courseId: string }>();
-  const routeCourseId = resolveRouteCourseId(params.courseId);
-  const course = classroom.courses.find((item) => item.id === routeCourseId);
-
-  const detail = useMemo(() => {
-    if (!course) {
-      return null;
-    }
-
-    return {
-      course,
-      status: getStatus(course, classroom.now, classroom.studentEnrollments[course.id])
-    };
-  }, [classroom.now, classroom.studentEnrollments, course]);
-
-  if (!detail) {
-    notFound();
-  }
-
-  const actionable = detail.status.phase === "open" || detail.status.phase === "full" || detail.status.phase === "my-enrolled" || detail.status.phase === "my-waitlist";
-  const isCancelAction = detail.status.phase === "my-enrolled" || detail.status.phase === "my-waitlist";
+  const course = classroom.courses.find((item) => item.id === params.courseId);
 
   return (
     <section>
-      <button className="btn" onClick={() => router.push("/student/browse")} style={{ background: "transparent", color: "#6B7280", fontWeight: 800, marginBottom: 16 }}>
-        ← 回到課程列表
-      </button>
+      <Link href="/student/browse" className="btn btn-link" style={{ marginBottom: 16 }}>
+        <BackIcon aria-hidden="true" />
+        回到課程列表
+      </Link>
 
-      <div className="card" style={{ padding: 32 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div>
-            <span className="badge" style={{ background: "#F3F4F6", color: "#4B5563" }}>{detail.course.category}</span>
-            <div style={{ fontSize: 28, fontWeight: 900, marginTop: 10, letterSpacing: "-0.04em" }}>{detail.course.title}</div>
-            <div className="muted" style={{ fontSize: 14, marginTop: 8 }}>{detail.course.teacher} 老師 · {dayLabel(detail.course.day)} {buildPeriodLabel(detail.course.periodIndex)} · 📍 {detail.course.location}</div>
+      <CourseDataBoundary
+        skeleton={
+          <div className="card detail-card" aria-hidden="true">
+            <div className="skeleton" style={{ height: 22, width: "60%", marginBottom: 14 }} />
+            <div className="skeleton" style={{ height: 14, width: "40%", marginBottom: 24 }} />
+            <div className="skeleton" style={{ height: 80, width: "100%" }} />
           </div>
-        </div>
+        }
+      >
+        {!course ? (
+          <div className="card empty-state">
+            找不到這門課程，它可能已經被教師刪除。
+            <br />
+            <Link href="/student/browse" style={{ color: "var(--subtitle)", fontWeight: 800 }}>
+              回到課程列表
+            </Link>
+          </div>
+        ) : (
+          <CourseDetail courseId={course.id} />
+        )}
+      </CourseDataBoundary>
+    </section>
+  );
+}
 
-        <div style={{ marginTop: 24 }}>
-          <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 8 }}>課程簡介</div>
-          <div style={{ color: "#374151", fontSize: 14, lineHeight: 1.75 }}>{detail.course.description}</div>
-        </div>
+function CourseDetail({ courseId }: Readonly<{ courseId: string }>) {
+  const classroom = useClassroom();
+  const course = classroom.courses.find((item) => item.id === courseId);
 
-        <div style={{ marginTop: 22 }}>
-          <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 8 }}>課程大綱</div>
-          <div style={{ display: "grid", gap: 6 }}>
-            {detail.course.syllabus.map((item) => (
-              <div key={item} style={{ display: "flex", gap: 8, color: "#374151", fontSize: 14, lineHeight: 1.8 }}>
-                <span style={{ color: "var(--brand)" }}>▸</span>
+  if (!course) {
+    return null;
+  }
+
+  const status = getStatus(course, classroom.now, classroom.studentEnrollments[course.id]);
+  const actionable = isActionable(status.phase);
+  const cancels = isCancelAction(status.phase);
+  const isPending = classroom.pendingCourseId === course.id;
+
+  return (
+    <div className="card detail-card">
+      <div>
+        <span className="badge badge-category">{course.category}</span>
+        {course.hot ? (
+          <span className="badge badge-hot" style={{ marginLeft: 8 }}>
+            熱門
+          </span>
+        ) : null}
+        <h1 className="detail-card__title">{course.title}</h1>
+        <div className="muted detail-card__meta">
+          <span>
+            {course.teacher} 老師 · {dayLabel(course.day)} {buildPeriodLabel(course.periodIndex)}
+          </span>
+          <span className="detail-card__meta-item">
+            <LocationIcon aria-hidden="true" />
+            {course.location}
+          </span>
+        </div>
+      </div>
+
+      <div className="detail-section">
+        <h2 className="detail-section__title">課程簡介</h2>
+        <p className="detail-section__body" style={{ margin: 0 }}>
+          {course.description}
+        </p>
+      </div>
+
+      {course.syllabus.length > 0 ? (
+        <div className="detail-section">
+          <h2 className="detail-section__title">課程大綱</h2>
+          <div className="detail-syllabus">
+            {course.syllabus.map((item) => (
+              <div key={item} className="detail-syllabus__item">
+                <BulletIcon className="detail-syllabus__marker" aria-hidden="true" />
                 <span>{item}</span>
               </div>
             ))}
           </div>
         </div>
+      ) : null}
 
-        <div style={{ marginTop: 26, background: "#F9FAFB", borderRadius: 16, padding: 18, border: "1px solid #EEF2F7" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--muted)", marginBottom: 6 }}>
-            <span>剩餘名額</span>
-            <span>已選 <b className="pulse" style={{ color: "var(--text)" }}>{detail.course.enrolled}</b> / {detail.course.capacity}</span>
-          </div>
-          <div style={{ height: 8, background: "#EDEBE6", borderRadius: 999, overflow: "hidden", marginBottom: 14 }}>
-            <div style={{ height: "100%", background: getStatus(detail.course, classroom.now, classroom.studentEnrollments[detail.course.id]).color, width: `${getFillPct(detail.course.enrolled, detail.course.capacity)}%`, transition: "width .4s ease" }} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontWeight: 900, fontSize: 14, color: detail.status.color }}>{detail.status.label}</span>
-            <button
-              className="btn"
-              style={{ ...styleFromText(getButtonStyle(detail.status.phase)) }}
-              disabled={!actionable}
-              onClick={() => {
-                if (!actionable) {
-                  return;
-                }
+      <div className="detail-meter">
+        <div className="meter__label" style={{ fontSize: 13, marginBottom: 6 }}>
+          <span>名額</span>
+          <span>
+            已選 <b style={{ color: "var(--text)" }}>{course.enrolled}</b> / {course.capacity}
+            {course.waitlistCount > 0 ? `（候補 ${course.waitlistCount} 人）` : ""}
+          </span>
+        </div>
+        <div
+          className="meter meter--lg"
+          style={{ marginBottom: 14 }}
+          role="progressbar"
+          aria-valuenow={course.enrolled}
+          aria-valuemin={0}
+          aria-valuemax={course.capacity}
+          aria-label="名額"
+        >
+          <div
+            className="meter__fill"
+            data-full={course.enrolled >= course.capacity}
+            style={{ width: `${getFillPct(course.enrolled, course.capacity)}%` }}
+          />
+        </div>
+        <div className="course-card__footer">
+          <span className="status-text" data-phase={status.phase} style={{ fontSize: 14 }}>
+            {status.phase === "my-enrolled" ? <CheckIcon aria-hidden="true" /> : null}
+            {status.label}
+          </span>
+          <button
+            className="btn btn-status"
+            data-phase={status.phase}
+            disabled={!actionable || isPending}
+            onClick={() => {
+              if (cancels) {
+                void classroom.cancelEnrollment(course.id);
+                return;
+              }
 
-                if (isCancelAction) {
-                  classroom.cancelEnrollment(detail.course.id);
-                  return;
-                }
-
-                classroom.grabCourse(detail.course.id);
-              }}
-            >
-              {getButtonLabel(detail.status.phase)}
-            </button>
-          </div>
+              void classroom.grabCourse(course.id);
+            }}
+          >
+            {isPending ? "處理中…" : getButtonLabel(status.phase)}
+          </button>
         </div>
       </div>
-    </section>
+    </div>
   );
-}
-
-function styleFromText(styleText: string) {
-  return styleText.split(";").filter(Boolean).reduce<Record<string, string>>((style, chunk) => {
-    const [key, value] = chunk.split(":");
-    if (key && value) {
-      const cssKey = key.trim().replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
-      style[cssKey] = value.trim();
-    }
-    return style;
-  }, {});
 }

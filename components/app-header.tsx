@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import type { Route } from "next";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { BRAND_NAME, BrandLogo } from "@/components/brand";
+import { authClient } from "@/lib/auth-client";
+import type { Role } from "@/lib/types";
 
 type HeaderTab = {
   label: string;
@@ -12,46 +16,55 @@ type HeaderTab = {
 export function AppHeader({
   role,
   tabs,
-  userName,
-  onLogout,
+  userName
 }: Readonly<{
-  role: "student" | "teacher";
+  role: Role;
   tabs: HeaderTab[];
   userName: string;
-  onLogout: () => void;
 }>) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const roleLabel = role === "teacher" ? "教師" : "學生";
 
+  const handleLogout = async () => {
+    setIsSigningOut(true);
+    await authClient.signOut();
+    router.replace("/login");
+    router.refresh();
+  };
+
   return (
-    <header className="glass-panel" style={{ position: "sticky", top: 0, zIndex: 20, borderLeft: 0, borderRight: 0, borderTop: 0 }}>
-      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <header className="app-header glass-panel">
+      <div className="app-container app-header__inner">
+        <Link href="/" className="app-header__brand">
           <BrandLogo size={34} priority />
-          <div style={{ fontSize: 18, fontWeight: 900 }}>{BRAND_NAME}</div>
+          <span className="app-header__brand-name">{BRAND_NAME}</span>
         </Link>
 
-        <nav style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        <nav className="app-header__nav" aria-label="主要導覽">
           {tabs.map((tab) => {
             const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
 
             return (
-              <Link key={tab.href} href={tab.href as any} className="btn tab" data-active={active}>
+              <Link
+                key={tab.href}
+                href={tab.href as Route}
+                className="tab"
+                data-active={active}
+                aria-current={active ? "page" : undefined}
+              >
                 {tab.label}
               </Link>
             );
           })}
         </nav>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="badge" style={{ background: role === "teacher" ? "#262626" : "#1f1f1f", color: "#d4d4d4", border: "1px solid #3a3a3a" }}>
-              {roleLabel}
-            </span>
-            <span style={{ fontSize: 14, fontWeight: 800 }}>{userName}</span>
-          </div>
-          <button className="btn" onClick={onLogout} style={{ border: "1px solid #3a3a3a", background: "#171717", padding: "8px 12px", color: "#d4d4d4", fontWeight: 800 }}>
-            登出
+        <div className="app-header__user">
+          <span className="badge badge-role">{roleLabel}</span>
+          <span className="app-header__user-name">{userName}</span>
+          <button className="btn btn-ghost" onClick={() => void handleLogout()} disabled={isSigningOut}>
+            {isSigningOut ? "登出中…" : "登出"}
           </button>
         </div>
       </div>

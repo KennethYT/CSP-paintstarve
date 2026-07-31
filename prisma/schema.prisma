@@ -3,8 +3,18 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../sqlite.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  student
+  teacher
+}
+
+enum EnrollmentStatus {
+  enrolled
+  waitlist
 }
 
 model account {
@@ -29,7 +39,7 @@ model account {
 model session {
   id        String   @id
   expiresAt DateTime
-  token     String   @unique(map: "sqlite_autoindex_session_2")
+  token     String   @unique
   createdAt DateTime
   updatedAt DateTime
   ipAddress String?
@@ -43,13 +53,17 @@ model session {
 model user {
   id            String    @id
   name          String
-  email         String    @unique(map: "sqlite_autoindex_user_2")
-  emailVerified Int
+  email         String    @unique
+  emailVerified Boolean   @default(false)
   image         String?
+  role          Role?
   createdAt     DateTime
   updatedAt     DateTime
   account       account[]
   session       session[]
+
+  coursesTaught Course[]     @relation("CourseTeacher")
+  enrollments   Enrollment[]
 }
 
 model verification {
@@ -61,4 +75,45 @@ model verification {
   updatedAt  DateTime
 
   @@index([identifier])
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  teacherId   String
+  // 對應 lib/types.ts 的 CourseCategory。值是中文，Prisma enum 識別字不支援，故用 String。
+  category    String
+  day         Int
+  periodIndex Int
+  location    String
+  description String
+  syllabus    String[]
+  capacity    Int
+  openAt      DateTime
+  hot         Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacher     user         @relation("CourseTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+
+  @@index([teacherId])
+}
+
+model Enrollment {
+  id     String           @id @default(cuid())
+  status EnrollmentStatus
+  // 僅 waitlist 使用，enrolled 為 null
+  position  Int?
+  courseId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 同一人同一課只能有一筆，併發時的最後防線
+  @@unique([courseId, userId])
+  @@index([courseId, status])
+  @@index([userId])
 }
