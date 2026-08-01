@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
-import { PrismaClient, type EnrollmentStatus } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { type EnrollmentStatus } from "../lib/generated/prisma/client";
+import { prisma } from "../lib/prisma";
 
 const HOUR = 3600 * 1000;
 const DAY = 24 * HOUR;

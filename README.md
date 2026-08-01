@@ -46,8 +46,11 @@ pnpm dev
 
 | 指令 | 說明 |
 |---|---|
-| `pnpm dev` | 開發伺服器 |
-| `pnpm build` / `pnpm start` | 正式版建置／啟動 |
+| `pnpm dev` | 開發伺服器（Next.js，Node runtime） |
+| `pnpm build` | 正式版建置（`prisma generate` + OpenNext 打包成 Worker） |
+| `pnpm preview` | 用真正的 workerd runtime 在本機跑 Worker，部署前的主要驗證手段 |
+| `pnpm deploy` | 部署到 Cloudflare Workers |
+| `pnpm build:next` | 只跑 Next.js 建置，不打包 Worker（除錯用） |
 | `pnpm lint` | ESLint |
 | `pnpm db:push` | 把 schema 同步到資料庫 |
 | `pnpm db:seed` | 重建示範課程資料（會清空既有課程與選課） |
@@ -106,22 +109,76 @@ await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${courseId}, 
 
 ### 權限
 
-三層，由外到內：
+兩層：
 
-1. `proxy.ts` — edge 層只看 session cookie 在不在，是效能優化，**不是授權依據**
-2. `app/student/layout.tsx`、`app/teacher/layout.tsx` — server component 用
-   `requireRole()` 做權威把關，關掉 JS 也繞不過
-3. 每個 API route 各自驗證 session 與角色
+1. `app/student/layout.tsx`、`app/teacher/layout.tsx` — 經由 `components/role-shell.tsx`
+   用 `requireRole()` 做權威把關，關掉 JS 也繞不過
+2. 每個 API route 各自驗證 session 與角色
+
+> 早期還有第三層：`proxy.ts` 在 edge 檢查 session cookie 是否存在。
+> 那只是效能優化、從來不是授權依據，而 `@opennextjs/cloudflare` 目前不支援
+> Next.js 16 的 Node.js runtime middleware（`proxy.ts` 無法改用 Edge runtime），
+> 所以搬到 Workers 時直接移除。未登入者現在由 `requireRole()` 導回 `/login`，
+> 使用者看到的結果相同，只是多一次 server render。
 
 使用者的 `role` 在 better-auth 設為 `input: false`，全專案只有 Discord 身份組解析
 （`lib/discord.ts`）會寫入它，使用者無法透過 update-user 端點自行把自己改成教師。
 
 選課名單不會隨課程列表送到瀏覽器，只有授課教師能透過 `/api/courses/[courseId]/roster` 取得。
 
-## 部署
+## 部署（Cloudflare Workers）
 
-任何支援 Next.js 與 PostgreSQL 的平台都可以。設定好 `DATABASE_URL`、`BETTER_AUTH_SECRET`、
-`BETTER_AUTH_URL`（要是正式網址）後執行 `pnpm db:push` 建表即可。
+透過 [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) 把 Next.js 打包成 Worker。
+設定檔是 `wrangler.jsonc` 與 `open-next.config.ts`。
 
-記得把 `<你的網址>/api/auth/callback/discord` 加進 Discord 應用程式的 OAuth2 Redirect URI，
+### 資料庫必須是 Neon，而且要用 direct endpoint
+
+這不是偏好問題，是被搶課邏輯逼出來的結論。`lib/course-service.ts` 用
+`pg_advisory_xact_lock` 搭配 interactive transaction 保證不超賣，而在 Workers 上：
+
+- **Cloudflare Hyperdrive 不支援 advisory lock**，而且它是 transaction-mode pooler，
+  官方文件本身就警告不要用長交易維持狀態 → 不能用
+- **Neon 的 HTTP driver 不支援 interactive transaction** → 不能用
+- **Neon 的 WebSocket driver（`Pool`）** 提供完整的 pg 連線語意 —— session state、
+  advisory lock、`BEGIN`/`COMMIT` 全部成立 → **這是唯一可行的選項**
+
+因此 `lib/prisma.ts` 用的是 `PrismaNeon`（WebSocket 版，不是 `PrismaNeonHttp`），
+`DATABASE_URL` 請填 Neon 的 **direct** endpoint，**不要**用 `-pooler` 那條 ——
+pooler 是 transaction-mode 的 PgBouncer，會讓 advisory lock 的行為變得不可靠。
+
+> **已知取捨**：沒有 pooler，Neon compute 的最大連線數就是併發上限。開搶尖峰時
+> 每個排隊中的請求各佔一條連線數秒，有可能觸頂。若實測撐不住，正統的 Workers 解法是把
+> 「同一堂課的序列化」交給 Durable Object（一課一個 DO，天生序列化），DB 只負責寫入。
+> 那是一次大改，目前尚未進行。
+
+### 步驟
+
+1. 建立 Neon 專案，取得 direct endpoint 連線字串
+2. 本機 `pnpm db:push && pnpm db:seed` 建表與匯入示範資料
+3. 設定 Cloudflare 的機密（**不要**寫進 `wrangler.jsonc`）：
+   ```bash
+   wrangler secret put DATABASE_URL
+   wrangler secret put BETTER_AUTH_SECRET
+   wrangler secret put BETTER_AUTH_URL          # 正式網址
+   wrangler secret put DISCORD_CLIENT_ID        # 其餘 DISCORD_* 同理
+   ```
+4. `pnpm preview` 先在本機的 workerd 跑過一遍，再 `pnpm deploy`
+
+用 Cloudflare 的 Workers Builds（推 git 就自動部署）時：
+
+| 設定 | 值 |
+|---|---|
+| Build command | `pnpm build` |
+| Deploy command | `npx opennextjs-cloudflare deploy` |
+| Build variables | `BETTER_AUTH_SECRET`、`BETTER_AUTH_URL` |
+
+> Deploy command 若維持預設的 `npx wrangler deploy`，wrangler 會判定專案沒設定好而觸發
+> auto-config，自動跑一次 `@opennextjs/cloudflare migrate` 覆寫 `wrangler.jsonc`、
+> `open-next.config.ts` 與 `package.json` scripts。那些改動只存在於 CI 的暫存 checkout，
+> 每次建置都會重來一次。
+>
+> Build variables 要設，是因為 `/login` 是靜態預產生頁面，建置階段就會初始化 better-auth；
+> 缺 `BETTER_AUTH_SECRET` 時它會丟 `You are using the default secret`。
+
+最後把 `<你的網址>/api/auth/callback/discord` 加進 Discord 應用程式的 OAuth2 Redirect URI，
 否則登入會失敗。

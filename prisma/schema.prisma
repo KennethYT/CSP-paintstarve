@@ -1,10 +1,15 @@
+// Prisma 7 的 Rust-free client。provider 必須是 prisma-client（不是舊的
+// prisma-client-js），且一定要指定 output —— 這是能在 Cloudflare Workers
+// 的 workerd runtime 執行的前提，舊的 Rust query engine 在那裡跑不起來。
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
 }
 
+// Prisma 7 不再接受 schema 裡的 url：CLI 的連線字串移到 prisma.config.ts，
+// 執行期的連線則由 lib/prisma.ts 傳入的 driver adapter 負責。
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
