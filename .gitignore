@@ -1,7 +1,14 @@
 .next/
+.open-next/
 node_modules/
+tsconfig.tsbuildinfo
+# Prisma Client 由 build 時的 prisma generate 產生
+lib/generated/
+.dev.vars
+.wrangler/
 .env
 .env.*
+!.env.example
 coverage/
 dist/
 out/
